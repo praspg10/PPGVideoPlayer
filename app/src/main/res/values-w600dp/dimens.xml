@@ -1,0 +1,7 @@
+<resources>
+    <dimen name="fab_margin">48dp</dimen>
+    <dimen name="video_item_margin">12dp</dimen>
+    <dimen name="video_item_radius">24dp</dimen>
+    <dimen name="video_item_elevation">6dp</dimen>
+    <dimen name="video_title_size">18sp</dimen>
+</resources>

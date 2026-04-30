@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Legacy names for compatibility with existing drawables -->
+    <color name="ytk_red">#FF0000</color>
+    <color name="ytk_blue">#2196F3</color>
+
+    <!-- YouTube Kids Inspired Palette -->
+    <color name="ytk_primary_red">#FF0000</color>
+    <color name="ytk_cyan">#00BCD4</color>
+    <color name="ytk_light_blue">#E3F2FD</color>
+    <color name="ytk_orange">#FF9800</color>
+    <color name="ytk_green">#4CAF50</color>
+    <color name="ytk_yellow">#FFEB3B</color>
+    <color name="ytk_purple">#9C27B0</color>
+
+    <color name="ytk_background">#F8F9FA</color>
+    <color name="ytk_card_bg">#FFFFFF</color>
+    <color name="ytk_toolbar_bg">#FF0000</color>
+</resources>
