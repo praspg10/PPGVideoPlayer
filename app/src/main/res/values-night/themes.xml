@@ -1,6 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Base.Theme.PPGVideoPlayer" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Base.Theme.PPGYouTubeKids" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/ytk_primary_red</item>
         <item name="colorSecondary">@color/ytk_cyan</item>
         <item name="android:statusBarColor">@color/ytk_primary_red</item>

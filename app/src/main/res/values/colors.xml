@@ -16,7 +16,12 @@
     <color name="ytk_yellow">#FFEB3B</color>
     <color name="ytk_purple">#9C27B0</color>
 
-    <color name="ytk_background">#F8F9FA</color>
+    <color name="ytk_background">#FFF8E1</color>
     <color name="ytk_card_bg">#FFFFFF</color>
     <color name="ytk_toolbar_bg">#FF0000</color>
+
+    <color name="butterscotch_bg">#FFF8E1</color>
+    <color name="butterscotch_accent">#FFB74D</color>
+    <color name="tab_selected_bg">#FFB74D</color>
+    <color name="tab_unselected_bg">#FFE0B2</color>
 </resources>

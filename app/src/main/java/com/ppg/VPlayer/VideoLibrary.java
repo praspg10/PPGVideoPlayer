@@ -35,6 +35,9 @@ public class VideoLibrary {
 
     private static void scanRecursive(Context context, DocumentFile parent, List<Video> videoList) {
         DocumentFile[] files = parent.listFiles();
+        String folderName = parent.getName();
+        if (folderName == null) folderName = "Unknown";
+        
         for (DocumentFile file : files) {
             if (file.isDirectory()) {
                 scanRecursive(context, file, videoList);
@@ -44,13 +47,19 @@ public class VideoLibrary {
                     String lowerName = name.toLowerCase();
                     if (lowerName.endsWith(".mp4") || lowerName.endsWith(".mp3") || lowerName.endsWith(".mkv")) {
                         int duration = 0;
-                        try (android.media.MediaMetadataRetriever retriever = new android.media.MediaMetadataRetriever()) {
+                        android.media.MediaMetadataRetriever retriever = new android.media.MediaMetadataRetriever();
+                        try {
                             retriever.setDataSource(context, file.getUri());
                             String time = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION);
                             if (time != null) duration = Integer.parseInt(time);
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) {
+                        } finally {
+                            try {
+                                retriever.release();
+                            } catch (Exception ignored) {}
+                        }
                         
-                        videoList.add(new Video(file.getUri(), name, duration, file.length()));
+                        videoList.add(new Video(file.getUri(), name, duration, file.length(), folderName));
                     }
                 }
             }
@@ -67,7 +76,8 @@ public class VideoLibrary {
                 MediaStore.Video.Media._ID,
                 MediaStore.Video.Media.DISPLAY_NAME,
                 MediaStore.Video.Media.DURATION,
-                MediaStore.Video.Media.SIZE
+                MediaStore.Video.Media.SIZE,
+                MediaStore.Video.Media.BUCKET_DISPLAY_NAME
         };
 
         try (Cursor cursor = context.getContentResolver().query(collection, projection, null, null, null)) {
@@ -76,14 +86,18 @@ public class VideoLibrary {
                 int nameCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DISPLAY_NAME);
                 int durationCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DURATION);
                 int sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.SIZE);
+                int bucketCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.BUCKET_DISPLAY_NAME);
 
                 while (cursor.moveToNext()) {
                     long id = cursor.getLong(idCol);
                     String name = cursor.getString(nameCol);
                     int duration = cursor.getInt(durationCol);
                     long size = cursor.getLong(sizeCol);
+                    String folderName = cursor.getString(bucketCol);
+                    if (folderName == null) folderName = "Internal";
+                    
                     Uri uri = ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id);
-                    videoList.add(new Video(uri, name, duration, size));
+                    videoList.add(new Video(uri, name, duration, size, folderName));
                 }
             }
         }

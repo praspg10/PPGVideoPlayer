@@ -3,14 +3,16 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="@dimen/video_item_margin"
-    app:cardCornerRadius="@dimen/video_item_radius"
-    app:cardElevation="@dimen/video_item_elevation"
-    app:strokeWidth="0dp">
+    android:layout_margin="@dimen/video_grid_spacing"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="2dp"
+    app:strokeColor="@color/white"
+    app:strokeWidth="@dimen/video_item_border_width">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:background="@color/white">
 
         <ImageView
             android:id="@+id/thumbnail"
@@ -23,24 +25,18 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <View
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:background="@drawable/gradient_overlay"
-            app:layout_constraintBottom_toBottomOf="@+id/thumbnail"
-            app:layout_constraintEnd_toEndOf="@+id/thumbnail"
-            app:layout_constraintStart_toStartOf="@+id/thumbnail"
-            app:layout_constraintTop_toTopOf="@+id/thumbnail" />
-
         <TextView
             android:id="@+id/title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:padding="12dp"
+            android:padding="8dp"
             android:text="Video Title"
             android:textColor="@android:color/black"
             android:textSize="@dimen/video_title_size"
-            android:textStyle="bold"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:textStyle="normal"
+            android:background="@color/white"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/thumbnail" />
@@ -50,11 +46,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_margin="8dp"
-            android:background="#80000000"
-            android:padding="4dp"
+            android:background="#A0000000"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
             android:text="00:00"
             android:textColor="@android:color/white"
-            android:textSize="12sp"
+            android:textSize="11sp"
             app:layout_constraintBottom_toBottomOf="@+id/thumbnail"
             app:layout_constraintEnd_toEndOf="@+id/thumbnail" />
 

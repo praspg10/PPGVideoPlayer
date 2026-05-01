@@ -5,7 +5,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -17,7 +16,6 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
-import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
@@ -37,9 +35,6 @@ public class MainActivity extends AppCompatActivity {
                         getContentResolver().takePersistableUriPermission(treeUri,
                                 Intent.FLAG_GRANT_READ_URI_PERMISSION);
                         
-                        // For simplicity in this demo, we'll try to get the path, 
-                        // though in modern Android we should ideally use the URI directly.
-                        // Here I'll just save the URI string as the "folder path" for the simple VideoLibrary.
                         SettingsManager.saveFolderPath(this, treeUri.toString());
                         videoViewModel.loadVideos(treeUri.toString());
                         Toast.makeText(this, "Folder selected", Toast.LENGTH_SHORT).show();
@@ -50,7 +45,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
+        try {
+            EdgeToEdge.enable(this);
+        } catch (Exception ignored) {}
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -63,30 +60,24 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
-        setSupportActionBar(binding.toolbar);
 
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
-        appBarConfiguration = new AppBarConfiguration.Builder(navController.getGraph()).build();
-        NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
+        androidx.navigation.fragment.NavHostFragment navHostFragment = (androidx.navigation.fragment.NavHostFragment) 
+                getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment_content_main);
+        
+        if (navHostFragment != null) {
+            NavController navController = navHostFragment.getNavController();
+            appBarConfiguration = new AppBarConfiguration.Builder(navController.getGraph()).build();
+        }
 
         videoViewModel.getIsScanning().observe(this, isScanning -> {
             if (isScanning) {
                 Toast.makeText(this, "Scanning videos...", Toast.LENGTH_SHORT).show();
             }
         });
-
-        navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
-            if (destination.getId() == R.id.VideoPlayerFragment) {
-                if (getSupportActionBar() != null) getSupportActionBar().hide();
-            } else {
-                if (getSupportActionBar() != null) getSupportActionBar().show();
-            }
-        });
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
@@ -97,9 +88,6 @@ public class MainActivity extends AppCompatActivity {
 
         if (id == R.id.action_settings) {
             showSettingsDialog();
-            return true;
-        } else if (id == R.id.action_dark_mode) {
-            toggleDarkMode();
             return true;
         } else if (id == R.id.action_about) {
             showAboutDialog();
@@ -135,27 +123,23 @@ public class MainActivity extends AppCompatActivity {
         builder.show();
     }
 
-    private void toggleDarkMode() {
-        int currentMode = getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
-        if (currentMode == android.content.res.Configuration.UI_MODE_NIGHT_YES) {
-            androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO);
-        } else {
-            androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES);
-        }
-    }
-
     private void showAboutDialog() {
         new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("About VPlayer")
-                .setMessage("A kid-friendly video player for offline use.\nVersion 1.0")
+                .setTitle("About PPG-YouTubeKids")
+                .setMessage("A kid-friendly offline video player for offline use.\nVersion 1.0")
                 .setPositiveButton("OK", null)
                 .show();
     }
 
     @Override
     public boolean onSupportNavigateUp() {
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
-        return NavigationUI.navigateUp(navController, appBarConfiguration)
-                || super.onSupportNavigateUp();
+        androidx.navigation.fragment.NavHostFragment navHostFragment = (androidx.navigation.fragment.NavHostFragment) 
+                getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment_content_main);
+        if (navHostFragment != null) {
+            NavController navController = navHostFragment.getNavController();
+            return NavigationUI.navigateUp(navController, appBarConfiguration)
+                    || super.onSupportNavigateUp();
+        }
+        return super.onSupportNavigateUp();
     }
 }

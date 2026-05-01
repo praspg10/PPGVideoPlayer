@@ -1,5 +1,6 @@
 package com.ppg.VPlayer;
 
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,7 +19,7 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
     private final boolean isSmall;
 
     public interface OnVideoClickListener {
-        void onVideoClick(Video video);
+        void onVideoClick(Video video, int position);
     }
 
     public VideoAdapter(List<Video> videos, OnVideoClickListener listener) {
@@ -42,17 +43,15 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
     @Override
     public void onBindViewHolder(@NonNull VideoViewHolder holder, int position) {
         Video video = videos.get(position);
-        holder.title.setText(video.getName());
+        
+        String displayName = video.getName();
+        if (displayName != null) {
+            displayName = displayName.replaceAll("(?i)\\.(mp4|mkv|avi|mov|wmv|flv|webm|m4v|3gp|mp3)$", "");
+        }
+        holder.title.setText(displayName);
+
         if (holder.duration != null) {
             holder.duration.setText(formatDuration(video.getDuration()));
-        }
-
-        int[] colors = {R.color.ytk_cyan, R.color.ytk_orange, R.color.ytk_green, R.color.ytk_purple};
-        int color = holder.itemView.getContext().getResources().getColor(colors[position % colors.length], null);
-        
-        if (holder.itemView instanceof com.google.android.material.card.MaterialCardView) {
-            ((com.google.android.material.card.MaterialCardView) holder.itemView).setStrokeColor(color);
-            ((com.google.android.material.card.MaterialCardView) holder.itemView).setStrokeWidth(8);
         }
 
         int placeholder = video.getName().toLowerCase().endsWith(".mp3") 
@@ -64,7 +63,7 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
                 .placeholder(placeholder)
                 .into(holder.thumbnail);
 
-        holder.itemView.setOnClickListener(v -> listener.onVideoClick(video));
+        holder.itemView.setOnClickListener(v -> listener.onVideoClick(video, position));
     }
 
     @Override

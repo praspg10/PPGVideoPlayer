@@ -3,5 +3,7 @@
     <dimen name="video_item_margin">8dp</dimen>
     <dimen name="video_item_radius">20dp</dimen>
     <dimen name="video_item_elevation">4dp</dimen>
-    <dimen name="video_title_size">16sp</dimen>
+    <dimen name="video_title_size">18sp</dimen>
+    <dimen name="video_item_border_width">6dp</dimen>
+    <dimen name="video_grid_spacing">4dp</dimen>
 </resources>

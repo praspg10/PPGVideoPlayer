@@ -8,11 +8,6 @@
         android:title="Settings"
         app:showAsAction="never" />
     <item
-        android:id="@+id/action_dark_mode"
-        android:orderInCategory="101"
-        android:title="Dark Mode"
-        app:showAsAction="never" />
-    <item
         android:id="@+id/action_about"
         android:orderInCategory="102"
         android:title="About"

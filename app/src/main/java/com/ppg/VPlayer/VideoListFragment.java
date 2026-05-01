@@ -1,9 +1,7 @@
 package com.ppg.VPlayer;
 
 import android.Manifest;
-import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -16,14 +14,20 @@ import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
+import com.google.android.material.tabs.TabLayout;
 import com.ppg.VPlayer.databinding.FragmentVideoListBinding;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class VideoListFragment extends Fragment {
 
     private FragmentVideoListBinding binding;
-    private VideoAdapter adapter;
     private VideoViewModel viewModel;
+    private List<Video> allVideos = new ArrayList<>();
+    private List<String> categories = new ArrayList<>();
 
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
@@ -45,8 +49,31 @@ public class VideoListFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         viewModel = new androidx.lifecycle.ViewModelProvider(requireActivity()).get(VideoViewModel.class);
         
+        binding.btnMenu.setOnClickListener(v -> {
+            androidx.appcompat.widget.PopupMenu popup = new androidx.appcompat.widget.PopupMenu(requireContext(), v);
+            popup.getMenuInflater().inflate(R.menu.menu_main, popup.getMenu());
+            popup.setOnMenuItemClickListener(item -> {
+                return requireActivity().onOptionsItemSelected(item);
+            });
+            popup.show();
+        });
+
+        setupTabs();
         setupRecyclerView();
         checkPermissionAndLoad();
+    }
+
+    private void setupTabs() {
+        binding.tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                filterVideos(tab.getText().toString());
+            }
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {}
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {}
+        });
     }
 
     private void setupRecyclerView() {
@@ -58,22 +85,70 @@ public class VideoListFragment extends Fragment {
         });
 
         viewModel.getVideos().observe(getViewLifecycleOwner(), videos -> {
-            if (videos == null || videos.isEmpty()) {
+            if (videos != null && !videos.isEmpty()) {
+                allVideos = videos;
+                updateCategories();
+                // Default to first tab (All)
+                if (binding.tabLayout.getTabCount() > 0) {
+                    filterVideos("All");
+                }
+            } else {
                 if (Boolean.FALSE.equals(viewModel.getIsScanning().getValue())) {
                     binding.emptyView.setVisibility(View.VISIBLE);
                     binding.recyclerView.setVisibility(View.GONE);
                 }
-            } else {
-                binding.emptyView.setVisibility(View.GONE);
-                binding.recyclerView.setVisibility(View.VISIBLE);
-                adapter = new VideoAdapter(videos, video -> {
-                    Bundle args = new Bundle();
-                    args.putString("videoUri", video.getUri().toString());
-                    Navigation.findNavController(requireView()).navigate(R.id.action_VideoListFragment_to_VideoPlayerFragment, args);
-                });
-                binding.recyclerView.setAdapter(adapter);
             }
         });
+    }
+
+    private void updateCategories() {
+        Set<String> folderSet = new LinkedHashSet<>();
+        folderSet.add("All");
+        
+        for (Video v : allVideos) {
+            folderSet.add(v.getFolderName());
+        }
+        
+        List<String> newCategories = new ArrayList<>(folderSet);
+        if (newCategories.size() > 6) {
+            newCategories = newCategories.subList(0, 6);
+        }
+
+        if (!newCategories.equals(categories)) {
+            categories = newCategories;
+            binding.tabLayout.removeAllTabs();
+            for (String category : categories) {
+                binding.tabLayout.addTab(binding.tabLayout.newTab().setText(category));
+            }
+        }
+    }
+
+    private void filterVideos(String category) {
+        List<Video> filtered;
+        if (category.equals("All")) {
+            filtered = allVideos;
+        } else {
+            filtered = allVideos.stream()
+                    .filter(v -> v.getFolderName().equals(category))
+                    .collect(Collectors.toList());
+        }
+
+        VideoAdapter adapter = new VideoAdapter(filtered, (video, position) -> {
+            Bundle args = new Bundle();
+            args.putString("videoUri", video.getUri().toString());
+            args.putInt("videoPosition", position);
+            // We'll pass the whole filtered list IDs to play in sequence
+            ArrayList<String> playlist = filtered.stream()
+                    .map(v -> v.getUri().toString())
+                    .collect(Collectors.toCollection(ArrayList::new));
+            args.putStringArrayList("playlist", playlist);
+            
+            Navigation.findNavController(requireView()).navigate(R.id.action_VideoListFragment_to_VideoPlayerFragment, args);
+        });
+        binding.recyclerView.setAdapter(adapter);
+        
+        binding.emptyView.setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);
+        binding.recyclerView.setVisibility(filtered.isEmpty() ? View.GONE : View.VISIBLE);
     }
 
     private void checkPermissionAndLoad() {

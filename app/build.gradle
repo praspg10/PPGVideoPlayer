@@ -4,16 +4,14 @@ plugins {
 
 android {
     namespace 'com.ppg.VPlayer'
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    // Compile with 36 to satisfy modern Jetpack dependencies
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.ppg.VPlayer"
         minSdk 24
-        targetSdk 36
+        // Target 35 for stable behavior on Fire OS 8 (Android 11)
+        targetSdk 35
         versionCode 1
         versionName "1.0"
 
