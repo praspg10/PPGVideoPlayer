@@ -1,4 +1,4 @@
-# Requirements Document - PPGVideoPlayer
+# Requirements Document - PPGVideoPlayer v1.0
 
 ## 1. Project Overview
 PPGVideoPlayer is a kid-friendly video player designed for offline use on Android devices and tablets (specifically Fire HD). It focuses on providing a safe, simple, and engaging interface for children to watch local video content.
@@ -8,31 +8,39 @@ PPGVideoPlayer is a kid-friendly video player designed for offline use on Androi
 - Parents (administrators)
 
 ## 3. Functional Requirements
-### 3.1 Video Discovery
-- The app must scan the local file system for video files.
-- The app must allow users to select a specific folder for scanning.
-- The app should cache video metadata (thumbnails, duration, names) for quick loading.
+### 3.1 Video Discovery & Management (SVL)
+- **Initial State**: On first launch with no folder configured, the app displays only the "All" link and a "No videos found" message.
+- **Manual Scanning**: No background auto-scanning. Users must manually select a folder and click "Rescan" in Settings to build the library.
+- **Scanned Video List (SVL)**: The app saves the list of scanned videos. On subsequent launches, it reloads this list without re-accessing the storage.
+- **Manual Refresh**: Users must manually "Rescan" if new videos are added to the storage or if the app is re-installed.
 
 ### 3.2 User Interface
-- The UI must be vibrant and kid-friendly (inspired by YouTube Kids).
-- The app must support responsive layouts for both mobile and tablets (Fire HD).
-- Grid layout should adjust columns based on device orientation and screen size.
-- Thumbnails should be large and easy to tap.
+- **Screen-1 (Video List)**:
+    - Navigation: Folder links (tabs) appear as underlined text links.
+    - Limits: Displays "All" plus up to 5 folder links.
+    - Colors: Selected links use `ytk_primary_red` with an underline indicator.
+    - Randomization: Displays a random order of videos that is maintained during navigation. Reshuffles only when returning to "All" from a folder or on app launch.
+- **Screen-3 (Video Player)**:
+    - Filenames: Full filename displayed without extensions (e.g., no .mp4).
+    - Controls: Play/Pause button positioned at 50% vertical bias for accessibility.
+    - Film Strip: Displays random videos (excluding currently playing); reduced gaps and increased thumbnail width (253dp).
+    - Immersive: Global Sticky Immersive Mode (no status or navigation bars).
+    - Stay Awake: Screen stays at full brightness and never locks during playback.
 
 ### 3.3 Video Playback
-- Smooth playback of local video files.
-- Immersive full-screen mode during playback.
-- Simple, large playback controls (Play/Pause, Back).
-- A "Film Strip" of other available videos should be visible during playback for easy switching.
+- **SeekBar**: Custom style with white unplayed area (6dp thick) and red played area.
+- **Navigation**: Selecting a video from the film strip immediately transitions to 100% full-screen playback.
+- **Stability**: Robust back button functionality (<-) that returns to Screen-1 with the same list state, optimized for Fire OS 8.
 
 ## 4. Non-Functional Requirements
 ### 4.1 Performance
-- Fast scanning and loading of video libraries.
-- Smooth transitions between fragments.
+- Instant loading of the persistent SVL.
+- Smooth transitions without activity recreation during orientation changes.
 
 ### 4.2 Usability
-- High contrast and colorful design.
-- Minimal text, focusing on visual cues.
+- Large touch targets (64dp back button).
+- Minimum 24sp font size for critical labels in the player.
 
 ### 4.3 Reliability
-- Graceful handling of missing files or permission denials.
+- Fire OS 8 compatibility (handles aggressive system back gestures and orientation race conditions).
+- Corrupted metadata handling (durations > 24h reset to 00:00).

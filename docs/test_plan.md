@@ -1,46 +1,48 @@
-# Test Plan - PPGVideoPlayer
+# Test Plan - PPGVideoPlayer v1.0
 
 ## 1. Scope
-Testing covers the core functionality of video discovery, list display, and playback on both phone and tablet form factors.
+Testing covers the core functionality of manual video discovery, persistent randomization, immersive playback, and Fire HD tablet stability.
 
 ## 2. Test Environments
-- **Physical Devices**: Android Smartphone (Portrait/Landscape), Fire HD Tablet (Portrait/Landscape).
-- **Emulators**: Pixel 7 (API 34), Pixel Tablet.
+- **Physical Devices**: Fire HD 10 Tablet (Fire OS 8.3.3.8).
+- **Secondary Devices**: Android Smartphone (API 24+).
 
 ## 3. Test Cases
 
-### 3.1 Installation and Permissions
+### 3.1 Initialization & Manual Scan
 | ID | Description | Expected Result |
 |---|---|---|
-| TC-01 | Install app and launch | App launches to empty list or scan prompt. |
-| TC-02 | Grant media permissions | App successfully begins scanning for videos. |
-| TC-03 | Deny media permissions | App displays "Permission denied" toast and empty view. |
+| TC-01 | First Launch (No config) | Displays "All" link and "No videos found" message. No auto-scan. |
+| TC-02 | Select Folder and Rescan | Popup displays "Scanned Files Count" updating in real-time. Grid populates with random order. |
+| TC-03 | Relaunch App | SVL reloads instantly with the same random order as previous session. |
+| TC-04 | Folder Navigation | Link-style tabs change color to red when selected. List filtered by folder. |
+| TC-05 | Return to "All" | List is reshuffled with a new random sequence. |
 
-### 3.2 Video Discovery
+### 3.2 Screen-3 UI & UX
 | ID | Description | Expected Result |
 |---|---|---|
-| TC-04 | Scan folder with videos | Videos appear in grid with thumbnails and duration. |
-| TC-05 | Scan empty folder | App displays "No videos found" message. |
-| TC-06 | Select new folder in Settings | App rescans and updates list with new content. |
+| TC-06 | Verify Filename | Filename displayed in 24sp bold text without ".mp4" or other extensions. |
+| TC-07 | SeekBar Styling | Track is white and 6dp thick; progress is red. |
+| TC-08 | Film Strip Click | Selected video plays in 100% full screen immediately; strip disappears. |
+| TC-09 | Play/Pause Bias | Button is centered at 50% vertical bias (not too high). |
 
-### 3.3 UI and Responsiveness
+### 3.3 Immersive Experience & Stability
 | ID | Description | Expected Result |
 |---|---|---|
-| TC-07 | Rotate phone to Landscape | Grid changes from 2 to 3 columns. |
-| TC-08 | Launch on Tablet (sw600dp) | Grid displays 3 columns in Portrait, 5 in Landscape. |
-| TC-09 | Verify YTK styling | Toolbar title is in a white bubble; cards have colorful borders. |
+| TC-10 | Immersive Mode | Status and Navigation bars are invisible on all screens. |
+| TC-11 | Stay Awake | Screen stays at full brightness for > 1 minute without dimming or locking. |
+| TC-12 | Fire OS Back Button | Pressing "<-" in Player returns to Screen-1 with state preserved. App does NOT exit. |
+| TC-13 | Orientation Safety | Holding tablet in standing position (Portrait) does not crash the player on start or exit. |
 
-### 3.4 Video Playback
+### 3.4 Data Integrity
 | ID | Description | Expected Result |
 |---|---|---|
-| TC-10 | Start playback | Video starts; player enters immersive full-screen mode. |
-| TC-11 | Controls auto-hide | Controls disappear after 3 seconds of activity. |
-| TC-12 | Film strip navigation | Tapping a video in the film strip switches the current video immediately. |
-| TC-13 | Exit player | System bars return; app returns to the video list. |
+| TC-14 | Corrupted Duration | Video with invalid metadata shows "00:00" instead of 8-digit numbers. |
+| TC-15 | Rescan Update | Adding a file to storage and clicking "Rescan Now" updates the Scanned Files Count. |
 
 ## 4. Bug Reporting
 Bugs should be documented with:
+- Logcat entries (filtered by `tag:PPG_NAV`).
 - Steps to reproduce.
 - Expected vs. Actual result.
-- Device model and Android version.
-- Screen recordings if UI-related.
+- Device model and Fire OS version.

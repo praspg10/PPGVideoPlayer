@@ -1,40 +1,44 @@
-# Functional Specification - PPGVideoPlayer
+# Functional Specification - PPGVideoPlayer v1.0
 
 ## 1. Introduction
-This document describes the functional behavior and technical architecture of PPGVideoPlayer.
+This document describes the functional behavior and technical architecture of PPGVideoPlayer, optimized for Amazon Fire HD tablets.
 
 ## 2. Application Flow
-1. **Startup**: The app opens to the `VideoListFragment`.
-2. **Scanning**: On the first run, the app requests permission to access media. It then scans the default or selected folder.
-3. **Browsing**: Users browse videos in a colorful grid.
-4. **Playback**: Tapping a video navigates to `VideoPlayerFragment`.
-5. **Immersive Playback**: The player enters immersive mode, hiding system bars. Controls auto-hide after a delay.
-6. **Switching**: Users can tap videos in the film strip to change the playing video without leaving the player.
+1. **Startup**: Opens to `VideoListFragment`. Checks for saved SVL.
+2. **Initial State**: If no folder is configured, displays "No videos" message and only the "All" tab link.
+3. **Manual Setup**: User selects a folder and clicks "Rescan" in the custom Settings dialog.
+4. **Browsing**: Videos are presented in a persistent random order. Navigation between folders updates the filter; returning to "All" triggers a reshuffle.
+5. **Playback**: Navigates to `VideoPlayerFragment` (Screen-2/3).
+6. **Immersive Playback**: App enters global Sticky Immersive Mode. Status and Navigation bars are hidden but accessible via swipe.
+7. **Back Navigation**: Explicit `popBackStack` to ensure return to the maintained list state without app closure.
 
 ## 3. Component Details
 ### 3.1 MainActivity
-- Hosts the `NavHostFragment`.
-- Manages the `MaterialToolbar` visibility and style.
-- Handles folder selection via `ActivityResultLauncher`.
+- Manages global system UI visibility (Immersive Mode).
+- Handles `onBackPressed` to prevent accidental app exit on Fire OS.
+- Hosts a custom Settings dialog layout with "Select Folder to Scan" and "Rescan Now" links.
+- Uses `launchMode="singleTop"` for navigation stability.
 
 ### 3.2 VideoListFragment
-- Uses a `RecyclerView` with a `GridLayoutManager`.
-- Span count is dynamically determined by resource qualifiers (`values/integers.xml`, `values-land/integers.xml`, etc.).
-- Observes `VideoViewModel` for data updates.
+- Displays link-style folder tabs (underlined, red when selected).
+- Limits view to 1 "All" link and up to 5 folder links.
+- Maintains video grid state and scroll position during player transitions.
 
 ### 3.3 VideoPlayerFragment
-- Uses `ExoPlayer` (Media3) for playback.
-- Manages system UI visibility (Immersive Mode).
-- Contains a secondary `RecyclerView` (Film Strip) for quick navigation.
+- Implements safety checks (binding null-checks) for background tasks.
+- Uses `setKeepScreenOn(true)` at the view level for Fire OS compatibility.
+- Disables forced orientation changes to prevent activity recreation crashes.
+- Custom SeekBar with layer-list drawable (6dp thick).
 
 ### 3.4 VideoViewModel
-- Uses `AndroidViewModel` to survive configuration changes.
-- Loads and verifies video availability in background threads.
+- Stores `sessionVideos` to ensure stable randomization during a single session.
+- Provides `reshuffleAll()` logic triggered by tab navigation.
+- Persists and reloads the `ScannedVideoList` (SVL) via `SettingsManager`.
 
 ### 3.5 SettingsManager
-- Handles persistent storage of folder paths and video metadata using `SharedPreferences` and `Gson`.
+- Handles JSON serialization of the video list for offline persistence.
 
 ## 4. UI Design
-- **Theme**: Based on `Material3.Light`, customized with YTK colors.
-- **Components**: `MaterialCardView` with thick colorful strokes.
-- **Responsiveness**: Qualified resources for different screen widths (sw600dp for tablets).
+- **Theme**: Material3 with `configChanges` in Manifest to handle orientation without restart.
+- **Controls**: Back button icon (64dp target) and 24sp text labels.
+- **Color Palette**: `ytk_primary_red` (#FF0000) for primary actions and indicators.
