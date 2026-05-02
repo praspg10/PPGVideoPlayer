@@ -28,6 +28,7 @@ public class VideoListFragment extends Fragment {
     private VideoViewModel viewModel;
     private List<Video> allVideos = new ArrayList<>();
     private List<String> categories = new ArrayList<>();
+    private String currentCategory = "All";
 
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
@@ -60,6 +61,24 @@ public class VideoListFragment extends Fragment {
 
         setupTabs();
         setupRecyclerView();
+        
+        // RE-FIX: Populate videos and THEN update categories to ensure tabs show up immediately
+        List<Video> currentVideos = viewModel.getVideos().getValue();
+        if (currentVideos != null) {
+            allVideos = new ArrayList<>(currentVideos);
+            updateCategories();
+            filterVideos(currentCategory);
+            
+            // Ensure the correct tab is visually selected
+            for (int i = 0; i < binding.tabLayout.getTabCount(); i++) {
+                TabLayout.Tab tab = binding.tabLayout.getTabAt(i);
+                if (tab != null && tab.getText() != null && currentCategory.equals(tab.getText().toString())) {
+                    tab.select();
+                    break;
+                }
+            }
+        }
+
         checkPermissionAndLoad();
     }
 
@@ -67,7 +86,12 @@ public class VideoListFragment extends Fragment {
         binding.tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
-                filterVideos(tab.getText().toString());
+                String newCategory = tab.getText().toString();
+                if (newCategory.equals("All") && !currentCategory.equals("All")) {
+                    viewModel.reshuffleAll();
+                }
+                currentCategory = newCategory;
+                filterVideos(newCategory);
             }
             @Override
             public void onTabUnselected(TabLayout.Tab tab) {}
@@ -80,23 +104,41 @@ public class VideoListFragment extends Fragment {
         int spanCount = getResources().getInteger(R.integer.grid_span_count);
         binding.recyclerView.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(requireContext(), spanCount));
         
-        viewModel.getIsScanning().observe(getViewLifecycleOwner(), isScanning -> {
-            binding.progressBar.setVisibility(isScanning ? View.VISIBLE : View.GONE);
-        });
+        // Use a flag to avoid infinite loops during initial tab setup
+        final boolean[] isInitializing = {true};
 
         viewModel.getVideos().observe(getViewLifecycleOwner(), videos -> {
-            if (videos != null && !videos.isEmpty()) {
-                allVideos = videos;
-                updateCategories();
-                // Default to first tab (All)
-                if (binding.tabLayout.getTabCount() > 0) {
-                    filterVideos("All");
+            allVideos = (videos != null) ? videos : new ArrayList<>();
+            updateCategories();
+            
+            boolean currentlyScanning = Boolean.TRUE.equals(viewModel.getIsScanning().getValue());
+            
+            if (allVideos.isEmpty()) {
+                binding.recyclerView.setVisibility(View.GONE);
+                if (!currentlyScanning) {
+                    binding.emptyView.setVisibility(View.VISIBLE);
+                } else {
+                    binding.emptyView.setVisibility(View.GONE);
                 }
             } else {
-                if (Boolean.FALSE.equals(viewModel.getIsScanning().getValue())) {
-                    binding.emptyView.setVisibility(View.VISIBLE);
-                    binding.recyclerView.setVisibility(View.GONE);
+                binding.emptyView.setVisibility(View.GONE);
+                binding.recyclerView.setVisibility(View.VISIBLE);
+                
+                if (isInitializing[0]) {
+                    if (binding.tabLayout.getTabCount() > 0) {
+                        filterVideos(currentCategory);
+                    }
+                    isInitializing[0] = false;
                 }
+            }
+        });
+
+        viewModel.getIsScanning().observe(getViewLifecycleOwner(), isScanning -> {
+            binding.progressBar.setVisibility(isScanning ? View.VISIBLE : View.GONE);
+            if (!isScanning && allVideos.isEmpty()) {
+                binding.emptyView.setVisibility(View.VISIBLE);
+            } else if (isScanning) {
+                binding.emptyView.setVisibility(View.GONE);
             }
         });
     }
@@ -105,18 +147,23 @@ public class VideoListFragment extends Fragment {
         Set<String> folderSet = new LinkedHashSet<>();
         folderSet.add("All");
         
-        for (Video v : allVideos) {
-            folderSet.add(v.getFolderName());
+        if (allVideos != null && !allVideos.isEmpty()) {
+            for (Video v : allVideos) {
+                folderSet.add(v.getFolderName());
+            }
         }
         
         List<String> newCategories = new ArrayList<>(folderSet);
+        // Requirement: Limit to All + 5 folders (Total 6)
         if (newCategories.size() > 6) {
             newCategories = newCategories.subList(0, 6);
         }
 
-        if (!newCategories.equals(categories)) {
+        // RE-FIX: Force rebuild if the tab layout is empty (e.g. after view recreation)
+        if (!newCategories.equals(categories) || binding.tabLayout.getTabCount() == 0) {
             categories = newCategories;
             binding.tabLayout.removeAllTabs();
+            // If empty, only "All" will be in the set
             for (String category : categories) {
                 binding.tabLayout.addTab(binding.tabLayout.newTab().setText(category));
             }

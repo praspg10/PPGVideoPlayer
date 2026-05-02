@@ -16,7 +16,8 @@ public class VideoLibrary {
     public static List<Video> getVideos(Context context, String folderUriStr) {
         List<Video> videoList = new ArrayList<>();
         if (folderUriStr == null || folderUriStr.isEmpty()) {
-            return scanAllVideos(context);
+            // Requirement: Do not auto-scan storage. Return empty if no folder is configured.
+            return videoList;
         }
 
         try {
@@ -26,7 +27,8 @@ public class VideoLibrary {
                 scanRecursive(context, root, videoList);
             }
         } catch (Exception e) {
-            return scanAllVideos(context);
+            // Requirement: Do not fall back to scanning all videos.
+            return videoList;
         }
 
         Collections.shuffle(videoList);
@@ -51,7 +53,13 @@ public class VideoLibrary {
                         try {
                             retriever.setDataSource(context, file.getUri());
                             String time = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION);
-                            if (time != null) duration = Integer.parseInt(time);
+                            if (time != null) {
+                                duration = Integer.parseInt(time);
+                                // Validation: Some files report extremely high invalid durations
+                                if (duration > 86400000 || duration < 0) {
+                                    duration = 0;
+                                }
+                            }
                         } catch (Exception ignored) {
                         } finally {
                             try {

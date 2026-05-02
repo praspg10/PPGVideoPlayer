@@ -4,10 +4,12 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.media3.common.MediaItem;
@@ -26,7 +28,7 @@ public class VideoPlayerFragment extends Fragment {
     private ExoPlayer player;
     private VideoViewModel viewModel;
     private final Handler hideHandler = new Handler(Looper.getMainLooper());
-    private final Runnable hideControlsRunnable = () -> hideControls();
+    private final Runnable hideControlsRunnable = () -> { if (binding != null) hideControls(); };
     
     private List<String> playlistUris = new ArrayList<>();
     private int currentPosition = 0;
@@ -41,10 +43,12 @@ public class VideoPlayerFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        requireActivity().setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
-        hideSystemUI();
+        
         viewModel = new ViewModelProvider(requireActivity()).get(VideoViewModel.class);
         
+        // Use View-level keeping awake instead of Window-level to avoid Fire OS crashes
+        binding.playerView.setKeepScreenOn(true);
+
         setupPlayer();
         setupFilmStrip();
         setupControls();
@@ -57,25 +61,6 @@ public class VideoPlayerFragment extends Fragment {
                 playVideo(Uri.parse(playlistUris.get(currentPosition)));
             }
         }
-    }
-
-    private void hideSystemUI() {
-        View decorView = requireActivity().getWindow().getDecorView();
-        decorView.setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                | View.SYSTEM_UI_FLAG_FULLSCREEN);
-    }
-
-    private void showSystemUI() {
-        View decorView = requireActivity().getWindow().getDecorView();
-        decorView.setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
     }
 
     private void setupPlayer() {
@@ -101,17 +86,15 @@ public class VideoPlayerFragment extends Fragment {
         player.addListener(new Player.Listener() {
             @Override
             public void onIsPlayingChanged(boolean isPlaying) {
+                if (binding == null) return;
                 binding.btnPlayPause.setImageResource(isPlaying ? R.drawable.ic_pause_white_outlined : R.drawable.ic_play_white_outlined);
-                binding.btnPlayPause.setColorFilter(null);
                 if (isPlaying) {
                     startHideTimer();
                     startProgressUpdate();
                 } else {
                     cancelHideTimer();
                     stopProgressUpdate();
-                    if (!isSwitchingVideo) {
-                        showControls();
-                    }
+                    if (!isSwitchingVideo) showControls();
                 }
             }
 
@@ -120,8 +103,10 @@ public class VideoPlayerFragment extends Fragment {
                 if (playbackState == Player.STATE_ENDED) {
                     playNext();
                 } else if (playbackState == Player.STATE_READY) {
-                    binding.seekBar.setMax((int) player.getDuration());
-                    binding.txtTotalTime.setText(formatTime(player.getDuration()));
+                    if (binding != null) {
+                        binding.seekBar.setMax((int) player.getDuration());
+                        binding.txtTotalTime.setText(formatTime(player.getDuration()));
+                    }
                 }
             }
         });
@@ -130,7 +115,7 @@ public class VideoPlayerFragment extends Fragment {
     private final Runnable progressUpdateRunnable = new Runnable() {
         @Override
         public void run() {
-            if (player != null && player.isPlaying()) {
+            if (player != null && player.isPlaying() && binding != null) {
                 long current = player.getCurrentPosition();
                 binding.seekBar.setProgress((int) current);
                 binding.txtCurrentTime.setText(formatTime(current));
@@ -149,6 +134,11 @@ public class VideoPlayerFragment extends Fragment {
     }
 
     private String formatTime(long ms) {
+        if (ms <= 0) return "00:00";
+        // Sanity check: if duration is longer than 24 hours, it's likely a metadata error
+        if (ms > 86400000) {
+            return "00:00";
+        }
         int totalSeconds = (int) (ms / 1000);
         int minutes = totalSeconds / 60;
         int seconds = totalSeconds % 60;
@@ -160,12 +150,12 @@ public class VideoPlayerFragment extends Fragment {
             currentPosition++;
             playVideo(Uri.parse(playlistUris.get(currentPosition)));
         } else {
-            // End of playlist, maybe go back or restart? For now, just show controls
             showControls();
         }
     }
 
     private void toggleControls() {
+        if (binding == null) return;
         if (binding.controlsContainer.getVisibility() == View.VISIBLE) {
             hideControls();
         } else {
@@ -175,46 +165,51 @@ public class VideoPlayerFragment extends Fragment {
 
     private void setupFilmStrip() {
         binding.filmStrip.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
-        viewModel.getVideos().observe(getViewLifecycleOwner(), videos -> {
-            refreshFilmStrip();
-        });
+        viewModel.getVideos().observe(getViewLifecycleOwner(), videos -> refreshFilmStrip());
     }
 
     private void refreshFilmStrip() {
+        if (binding == null) return;
         List<Video> allVideos = viewModel.getVideos().getValue();
         if (allVideos != null && !allVideos.isEmpty()) {
             List<Video> filmStripVideos = new ArrayList<>(allVideos);
+            Uri currentUri = (player != null && player.getCurrentMediaItem() != null && player.getCurrentMediaItem().localConfiguration != null) 
+                    ? player.getCurrentMediaItem().localConfiguration.uri : null;
+            if (currentUri != null) filmStripVideos.removeIf(v -> v.getUri().equals(currentUri));
             Collections.shuffle(filmStripVideos);
-            if (filmStripVideos.size() > 15) {
-                filmStripVideos = filmStripVideos.subList(0, 15);
-            }
+            if (filmStripVideos.size() > 15) filmStripVideos = filmStripVideos.subList(0, 15);
 
-            VideoAdapter adapter = new VideoAdapter(filmStripVideos, (video, pos) -> {
-                // When clicking film strip, we play that video and immediately hide controls to go to S-2
-                playVideo(video.getUri());
-            }, true);
+            VideoAdapter adapter = new VideoAdapter(filmStripVideos, (video, pos) -> playVideo(video.getUri()), true);
             binding.filmStrip.setAdapter(adapter);
         }
     }
 
     private void setupControls() {
-        binding.btnPlayPause.setColorFilter(null);
-        
         binding.btnPlayPause.setOnClickListener(v -> {
-            if (player.isPlaying()) {
-                player.pause();
-            } else {
-                player.play();
-            }
+            if (player == null) return;
+            if (player.isPlaying()) player.pause();
+            else player.play();
             startHideTimer();
         });
 
-        binding.btnBack.setOnClickListener(v -> {
-            androidx.navigation.Navigation.findNavController(v).navigateUp();
-        });
+        binding.btnBack.setOnClickListener(v -> performBackNavigation());
+    }
+
+    private void performBackNavigation() {
+        Log.d("PPG_NAV", "performBackNavigation executed");
+        stopProgressUpdate();
+        cancelHideTimer();
+        if (player != null) player.stop();
+        
+        try {
+            Navigation.findNavController(requireView()).popBackStack();
+        } catch (Exception e) {
+            if (getActivity() != null) getActivity().onBackPressed();
+        }
     }
 
     private void playVideo(Uri uri) {
+        if (player == null) return;
         isSwitchingVideo = true;
         MediaItem mediaItem = MediaItem.fromUri(uri);
         player.setMediaItem(mediaItem);
@@ -222,7 +217,6 @@ public class VideoPlayerFragment extends Fragment {
         player.play();
         isSwitchingVideo = false;
 
-        // Update title in S-3 header - find full name from viewModel
         String name = null;
         List<Video> videos = viewModel.getVideos().getValue();
         if (videos != null) {
@@ -233,44 +227,40 @@ public class VideoPlayerFragment extends Fragment {
                 }
             }
         }
-
-        if (name == null) {
-            name = uri.getLastPathSegment();
-        }
-
-        if (name != null) {
-            // Remove extensions to show clean file name
+        if (name == null) name = uri.getLastPathSegment();
+        if (name != null && binding != null) {
             name = name.replaceAll("(?i)\\.(mp4|mkv|avi|mov|wmv|flv|webm|m4v|3gp|mp3)$", "");
             binding.txtVideoTitle.setText(name);
         }
-
         refreshFilmStrip();
         hideControls();
     }
 
     private void showControls() {
+        if (binding == null) return;
         binding.controlsContainer.setVisibility(View.VISIBLE);
         refreshFilmStrip();
-        // Reduce video size to 75% and move to top-centered
         binding.playerView.post(() -> {
-            binding.playerView.setPivotX(binding.playerView.getWidth() / 2f);
-            binding.playerView.setPivotY(0f);
-            binding.playerView.animate().scaleX(0.75f).scaleY(0.75f).setDuration(300).start();
+            if (binding != null) {
+                binding.playerView.setPivotX(binding.playerView.getWidth() / 2f);
+                binding.playerView.setPivotY(0f);
+                binding.playerView.animate().scaleX(0.75f).scaleY(0.75f).setDuration(300).start();
+            }
         });
         startHideTimer();
         startProgressUpdate();
     }
 
     private void hideControls() {
+        if (binding == null) return;
         binding.controlsContainer.setVisibility(View.GONE);
-        // Restore to 100% full screen
         binding.playerView.animate().scaleX(1.0f).scaleY(1.0f).setDuration(300).start();
         stopProgressUpdate();
     }
 
     private void startHideTimer() {
         cancelHideTimer();
-        hideHandler.postDelayed(hideControlsRunnable, 5000); // 5 seconds for kids
+        hideHandler.postDelayed(hideControlsRunnable, 5000);
     }
 
     private void cancelHideTimer() {
@@ -278,18 +268,17 @@ public class VideoPlayerFragment extends Fragment {
     }
 
     @Override
-    public void onStop() {
-        super.onStop();
-        if (player != null) {
-            player.pause();
-        }
+    public void onPause() {
+        super.onPause();
+        stopProgressUpdate();
+        cancelHideTimer();
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        requireActivity().setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
-        showSystemUI();
+        stopProgressUpdate();
+        cancelHideTimer();
         if (player != null) {
             player.release();
             player = null;

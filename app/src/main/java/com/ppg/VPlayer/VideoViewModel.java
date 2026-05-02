@@ -12,9 +12,12 @@ import java.util.List;
 public class VideoViewModel extends AndroidViewModel {
     private final MutableLiveData<List<Video>> videos = new MutableLiveData<>();
     private final MutableLiveData<Boolean> isScanning = new MutableLiveData<>(false);
+    private final MutableLiveData<String> currentFolderPath = new MutableLiveData<>();
+    private List<Video> sessionVideos = new ArrayList<>();
 
     public VideoViewModel(@NonNull Application application) {
         super(application);
+        currentFolderPath.setValue(SettingsManager.getFolderPath(application));
         loadInitialVideos();
     }
 
@@ -26,49 +29,49 @@ public class VideoViewModel extends AndroidViewModel {
         return isScanning;
     }
 
+    public LiveData<String> getCurrentFolderPath() {
+        return currentFolderPath;
+    }
+
+    public void updateFolderPath(String path) {
+        SettingsManager.saveFolderPath(getApplication(), path);
+        currentFolderPath.setValue(path);
+        loadVideos(path);
+    }
+
     private void loadInitialVideos() {
         List<Video> saved = SettingsManager.getSavedVideoList(getApplication());
-        if (saved.isEmpty()) {
-            loadVideos(SettingsManager.getFolderPath(getApplication()));
+        if (!saved.isEmpty()) {
+            sessionVideos = new ArrayList<>(saved);
+            Collections.shuffle(sessionVideos);
+            videos.setValue(sessionVideos);
         } else {
-            Collections.shuffle(saved);
-            List<Video> initialVerified = new ArrayList<>();
-            List<Video> remaining = new ArrayList<>();
-            
-            // Step 1: Quickly verify and show the first 10
-            for (Video v : saved) {
-                if (initialVerified.size() < 10) {
-                    if (VideoLibrary.isVideoAvailable(getApplication(), v.getUri())) {
-                        initialVerified.add(v);
-                    }
-                } else {
-                    remaining.add(v);
-                }
-            }
-            videos.setValue(initialVerified);
-            
-            // Step 2: Thoroughly verify the rest in the background
-            if (!remaining.isEmpty()) {
-                new Thread(() -> {
-                    List<Video> fullList = new ArrayList<>(initialVerified);
-                    for (Video v : remaining) {
-                        if (VideoLibrary.isVideoAvailable(getApplication(), v.getUri())) {
-                            fullList.add(v);
-                        }
-                    }
-                    // Update UI with the full verified list
-                    videos.postValue(fullList);
-                }).start();
-            }
+            videos.setValue(new ArrayList<>());
         }
     }
 
+    public void reshuffleAll() {
+        if (!sessionVideos.isEmpty()) {
+            Collections.shuffle(sessionVideos);
+            videos.setValue(sessionVideos);
+        }
+    }
+
+    public void clearSVL() {
+        sessionVideos.clear();
+        SettingsManager.saveVideoList(getApplication(), new ArrayList<>());
+        videos.setValue(new ArrayList<>());
+    }
+
     public void loadVideos(String folderPath) {
+        if (folderPath == null) return;
         isScanning.setValue(true);
         new Thread(() -> {
             List<Video> scanned = VideoLibrary.getVideos(getApplication(), folderPath);
             SettingsManager.saveVideoList(getApplication(), scanned);
-            videos.postValue(scanned);
+            sessionVideos = new ArrayList<>(scanned);
+            Collections.shuffle(sessionVideos);
+            videos.postValue(sessionVideos);
             isScanning.postValue(false);
         }).start();
     }

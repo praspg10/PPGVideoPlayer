@@ -72,6 +72,11 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
     }
 
     private String formatDuration(int durationMs) {
+        if (durationMs <= 0) return "00:00";
+        // Sanity check: if duration is longer than 24 hours, it's likely a metadata error
+        if (durationMs > 86400000) {
+             return "00:00";
+        }
         long seconds = (durationMs / 1000) % 60;
         long minutes = (durationMs / (1000 * 60)) % 60;
         long hours = (durationMs / (1000 * 60 * 60)) % 24;

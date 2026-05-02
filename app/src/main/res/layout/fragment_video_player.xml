@@ -10,6 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:use_controller="false"
+        android:keepScreenOn="true"
         android:transformPivotY="0dp" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -33,20 +34,22 @@
 
             <ImageButton
                 android:id="@+id/btnBack"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_back_white"
+                android:scaleType="fitCenter"
+                android:padding="4dp"
                 android:contentDescription="Back to Home" />
 
             <TextView
                 android:id="@+id/txtVideoTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="24dp"
                 android:text="Video Name"
                 android:textColor="@android:color/white"
-                android:textSize="18sp"
+                android:textSize="24sp"
                 android:textStyle="bold"
                 android:maxLines="1"
                 android:ellipsize="end" />
