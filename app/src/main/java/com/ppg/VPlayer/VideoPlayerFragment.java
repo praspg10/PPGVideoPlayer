@@ -270,6 +270,9 @@ public class VideoPlayerFragment extends Fragment {
     @Override
     public void onPause() {
         super.onPause();
+        if (player != null) {
+            player.stop();
+        }
         stopProgressUpdate();
         cancelHideTimer();
     }

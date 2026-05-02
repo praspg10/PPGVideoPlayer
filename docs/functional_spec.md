@@ -1,4 +1,4 @@
-# Functional Specification - PPGVideoPlayer v1.0
+# Functional Specification - PPGVideoPlayer v2.0
 
 ## 1. Introduction
 This document describes the functional behavior and technical architecture of PPGVideoPlayer, optimized for Amazon Fire HD tablets.
@@ -15,14 +15,17 @@ This document describes the functional behavior and technical architecture of PP
 ## 3. Component Details
 ### 3.1 MainActivity
 - Manages global system UI visibility (Immersive Mode).
+- **System Navigation Styling**: Forces navigation bar to black background with white icons (clears `APPEARANCE_LIGHT_NAVIGATION_BARS`) for visibility on Fire OS.
 - Handles `onBackPressed` to prevent accidental app exit on Fire OS.
 - Hosts a custom Settings dialog layout with "Select Folder to Scan" and "Rescan Now" links.
 - Uses `launchMode="singleTop"` for navigation stability.
+- **Screen Off Handling**: Uses a `BroadcastReceiver` to detect `ACTION_SCREEN_OFF`, clears temporary application cache, and closes the app immediately to prevent background playback.
 
 ### 3.2 VideoListFragment
 - Displays link-style folder tabs (underlined, red when selected).
 - Limits view to 1 "All" link and up to 5 folder links.
 - Maintains video grid state and scroll position during player transitions.
+- **Header Actions**: Features a Settings icon (replacing 3-dots) and a Close (X) button that clears the application cache and finishes the activity.
 
 ### 3.3 VideoPlayerFragment
 - Implements safety checks (binding null-checks) for background tasks.
@@ -37,6 +40,7 @@ This document describes the functional behavior and technical architecture of PP
 
 ### 3.5 SettingsManager
 - Handles JSON serialization of the video list for offline persistence.
+- **Cache Management**: Provides `clearCache()` to recursively delete temporary files in the app's cache directory while preserving the persistent SVL.
 
 ## 4. UI Design
 - **Theme**: Material3 with `configChanges` in Manifest to handle orientation without restart.

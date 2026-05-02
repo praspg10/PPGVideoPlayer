@@ -1,4 +1,4 @@
-# Requirements Document - PPGVideoPlayer v1.0
+# Requirements Document - PPGVideoPlayer v2.0
 
 ## 1. Project Overview
 PPGVideoPlayer is a kid-friendly video player designed for offline use on Android devices and tablets (specifically Fire HD). It focuses on providing a safe, simple, and engaging interface for children to watch local video content.
@@ -19,13 +19,15 @@ PPGVideoPlayer is a kid-friendly video player designed for offline use on Androi
     - Navigation: Folder links (tabs) appear as underlined text links.
     - Limits: Displays "All" plus up to 5 folder links.
     - Colors: Selected links use `ytk_primary_red` with an underline indicator.
+    - Header: 3-dots menu replaced with Settings Icon. Added an (X) Close button to clear cache and exit.
     - Randomization: Displays a random order of videos that is maintained during navigation. Reshuffles only when returning to "All" from a folder or on app launch.
 - **Screen-3 (Video Player)**:
     - Filenames: Full filename displayed without extensions (e.g., no .mp4).
     - Controls: Play/Pause button positioned at 50% vertical bias for accessibility.
     - Film Strip: Displays random videos (excluding currently playing); reduced gaps and increased thumbnail width (253dp).
-    - Immersive: Global Sticky Immersive Mode (no status or navigation bars).
+    - Immersive: Global Sticky Immersive Mode (no status or navigation bars). System navigation icons (triangle, circle, square) are forced to be white on a black background for maximum visibility.
     - Stay Awake: Screen stays at full brightness and never locks during playback.
+    - Power Button: App stops playback, clears temporary cache, and closes immediately when the screen is turned off (Power button pressed).
 
 ### 3.3 Video Playback
 - **SeekBar**: Custom style with white unplayed area (6dp thick) and red played area.

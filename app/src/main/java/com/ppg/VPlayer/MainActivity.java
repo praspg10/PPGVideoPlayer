@@ -1,6 +1,7 @@
 package com.ppg.VPlayer;
 
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.Menu;
@@ -33,6 +34,7 @@ public class MainActivity extends AppCompatActivity {
     private AppBarConfiguration appBarConfiguration;
     private ActivityMainBinding binding;
     private VideoViewModel videoViewModel;
+    private android.content.BroadcastReceiver screenOffReceiver;
 
     private final ActivityResultLauncher<Intent> folderPickerLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -76,14 +78,48 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "Scanning videos...", Toast.LENGTH_SHORT).show();
             }
         });
+
+        setupScreenOffReceiver();
+    }
+
+    private void setupScreenOffReceiver() {
+        screenOffReceiver = new android.content.BroadcastReceiver() {
+            @Override
+            public void onReceive(android.content.Context context, Intent intent) {
+                if (Intent.ACTION_SCREEN_OFF.equals(intent.getAction())) {
+                    Log.d("PPG_NAV", "Screen off detected, clearing cache and finishing activity");
+                    SettingsManager.clearCache(context);
+                    finishAndRemoveTask();
+                    System.exit(0);
+                }
+            }
+        };
+        IntentFilter filter = new android.content.IntentFilter(Intent.ACTION_SCREEN_OFF);
+        registerReceiver(screenOffReceiver, filter);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (screenOffReceiver != null) {
+            unregisterReceiver(screenOffReceiver);
+        }
     }
 
     private void hideSystemUI() {
+        // Ensure navigation bar background is dark so icons show as white
+        getWindow().setNavigationBarColor(android.graphics.Color.BLACK);
+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
             WindowInsetsController controller = getWindow().getInsetsController();
             if (controller != null) {
                 controller.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
                 controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                
+                // Clear the light appearance flag to force icons to be white
+                controller.setSystemBarsAppearance(0, 
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | 
+                        WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
             }
         } else {
             // Legacy fallback
@@ -101,6 +137,18 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         hideSystemUI();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        android.os.PowerManager pm = (android.os.PowerManager) getSystemService(android.content.Context.POWER_SERVICE);
+        if (pm != null && !pm.isInteractive()) {
+            Log.d("PPG_NAV", "Screen is off in onPause, clearing cache and finishing");
+            SettingsManager.clearCache(this);
+            finishAndRemoveTask();
+            System.exit(0);
+        }
     }
 
     @Override
@@ -176,7 +224,7 @@ public class MainActivity extends AppCompatActivity {
     private void showAboutDialog() {
         new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setTitle("About PPG-YouTubeKids")
-                .setMessage("A kid-friendly offline video player.\nVersion 1.0\n\n" +
+                .setMessage("A kid-friendly offline video player.\nVersion 2.0\n\n" +
                         "Note: Each time the app is installed or new videos are added, " +
                         "you must manually 'Rescan' in Settings to update your list.")
                 .setPositiveButton("OK", null)

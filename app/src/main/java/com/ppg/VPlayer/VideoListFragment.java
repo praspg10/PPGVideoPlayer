@@ -59,6 +59,13 @@ public class VideoListFragment extends Fragment {
             popup.show();
         });
 
+        binding.btnCloseApp.setOnClickListener(v -> {
+            // Clear all cache and close the app
+            SettingsManager.clearCache(requireContext());
+            requireActivity().finishAndRemoveTask();
+            System.exit(0);
+        });
+
         setupTabs();
         setupRecyclerView();
         

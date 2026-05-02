@@ -1,4 +1,4 @@
-# Test Plan - PPGVideoPlayer v1.0
+# Test Plan - PPGVideoPlayer v2.0
 
 ## 1. Scope
 Testing covers the core functionality of manual video discovery, persistent randomization, immersive playback, and Fire HD tablet stability.
@@ -33,12 +33,17 @@ Testing covers the core functionality of manual video discovery, persistent rand
 | TC-11 | Stay Awake | Screen stays at full brightness for > 1 minute without dimming or locking. |
 | TC-12 | Fire OS Back Button | Pressing "<-" in Player returns to Screen-1 with state preserved. App does NOT exit. |
 | TC-13 | Orientation Safety | Holding tablet in standing position (Portrait) does not crash the player on start or exit. |
+| TC-14 | Power Button Close | Pressing Power button once while video plays stops audio, clears cache, and closes the app. |
+| TC-15 | Settings Icon | 3-dots menu is replaced by a Gear Settings Icon on Screen-1. |
+| TC-16 | Close (X) App | Tapping (X) on Screen-1 clears cache and exits the app. |
+| TC-17 | System Nav Icons | Swipe from edge reveals navigation icons; icons are white on a black background. |
 
 ### 3.4 Data Integrity
 | ID | Description | Expected Result |
 |---|---|---|
-| TC-14 | Corrupted Duration | Video with invalid metadata shows "00:00" instead of 8-digit numbers. |
-| TC-15 | Rescan Update | Adding a file to storage and clicking "Rescan Now" updates the Scanned Files Count. |
+| TC-18 | Corrupted Duration | Video with invalid metadata shows "00:00" instead of 8-digit numbers. |
+| TC-19 | Rescan Update | Adding a file to storage and clicking "Rescan Now" updates the Scanned Files Count. |
+| TC-20 | SVL Preservation | Closing app via Power or (X) clears temporary cache but keeps Scanned Video List safe. |
 
 ## 4. Bug Reporting
 Bugs should be documented with:
