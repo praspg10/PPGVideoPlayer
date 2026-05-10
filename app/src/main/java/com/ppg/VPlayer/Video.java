@@ -8,6 +8,7 @@ public class Video {
     private final int duration;
     private final long size;
     private final String folderName;
+    private int playCount = 0;
 
     public Video(Uri uri, String name, int duration, long size, String folderName) {
         this.uriString = uri.toString();
@@ -35,5 +36,13 @@ public class Video {
 
     public String getFolderName() {
         return folderName;
+    }
+
+    public int getPlayCount() {
+        return playCount;
+    }
+
+    public void incrementPlayCount() {
+        this.playCount++;
     }
 }

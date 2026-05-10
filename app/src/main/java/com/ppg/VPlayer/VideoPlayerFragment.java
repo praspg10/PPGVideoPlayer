@@ -302,9 +302,45 @@ public class VideoPlayerFragment extends Fragment {
     private void playVideo(Uri uri) {
         if (player == null) return;
         isSwitchingVideo = true;
+        
+        viewModel.incrementPlayCount(uri);
+        
         MediaItem mediaItem = MediaItem.fromUri(uri);
         player.setMediaItem(mediaItem);
         player.prepare();
+        
+        // Logical check for playback position (Requirements 5b, 5c, 5d)
+        int threshold = SettingsManager.getRandomThreshold(requireContext());
+        Video currentVideo = null;
+        List<Video> allVideos = viewModel.getVideos().getValue();
+        if (allVideos != null) {
+            for (Video v : allVideos) {
+                if (v.getUri().equals(uri)) {
+                    currentVideo = v;
+                    break;
+                }
+            }
+        }
+
+        if (currentVideo != null) {
+            int playCount = currentVideo.getPlayCount();
+            long duration = currentVideo.getDuration();
+            
+            // 5b: VPC < threshold -> Start from 0:00
+            if (playCount < threshold) {
+                player.seekTo(0);
+            } 
+            // 5c: VPC >= threshold AND duration < 5 mins -> Start from 0:00
+            else if (duration < 300000) {
+                player.seekTo(0);
+            }
+            // 5d: VPC >= threshold AND duration >= 5 mins -> Start from random position
+            else {
+                long randomPos = (long) (Math.random() * (duration * 0.8)); // first 80%
+                player.seekTo(randomPos);
+            }
+        }
+
         player.play();
         isSwitchingVideo = false;
 

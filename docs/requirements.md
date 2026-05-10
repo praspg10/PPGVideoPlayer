@@ -12,15 +12,26 @@ PPGVideoPlayer is a kid-friendly video player designed for offline use on Androi
 - **Initial State**: On first launch with no folder configured, the app displays only the "All" link and a "No videos found" message.
 - **Manual Scanning**: No background auto-scanning. Users must manually select a folder and click "Rescan" in Settings to build the library.
 - **Scanned Video List (SVL)**: The app saves the list of scanned videos. On subsequent launches, it reloads this list without re-accessing the storage.
-- **Manual Refresh**: Users must manually "Rescan" if new videos are added to the storage or if the app is re-installed.
+- **Manual Refresh**: Users must manually "RESCAN" if new videos are added to the storage or if the app is re-installed.
+- **Recent Tab**: A "Recent" tab displays videos that have been played at least once. This list is reset upon manual "RESCAN".
+- **Video Played Count (VPC)**: The app increments a play count for each video. In the "Recent" tab, a small circular badge in the top-right corner of each thumbnail displays its VPC.
 
 ### 3.2 User Interface
 - **Screen-1 (Video List)**:
     - Navigation: Folder links (tabs) appear as underlined text links.
-    - Limits: Displays "All" plus up to 5 folder links.
+    - Limits: Displays "All", "Recent" (if enabled), plus up to 5 folder links.
     - Colors: Selected links use `ytk_primary_red` with an underline indicator.
-    - Header: 3-dots menu replaced with Settings Icon. Added an (X) Close button to clear cache and exit.
-    - Randomization: Displays a random order of videos that is maintained during navigation. Reshuffles only when returning to "All" from a folder or on app launch.
+    - Header: Gear Settings Icon replaces 3-dots menu. Added an (X) Close button to clear cache and exit.
+- **Settings Popup**:
+    - Layout: Increased size (approx. 30% wider) with large, readable fonts (18sp).
+    - Rows:
+        1. Recently Played Videos (Enable/Disable toggle).
+        2. Active Screen Time (AST) limit in minutes.
+        3. AST CoolTime in minutes.
+        4. Smart Random Playback threshold (PlayCount).
+    - Bottom Info: "Current Folder" (showing 1-level parent and folder name) and "Scanned Files Count" are positioned just above buttons.
+    - Buttons: "VIDEO SOURCE" (select folder), "RESCAN" (manual update), and "SAVE" (persist settings).
+    - Navigation: "X" icon in top-right corner for dismissal without saving.
 - **Screen-3 (Video Player)**:
     - Filenames: Full filename displayed without extensions (e.g., no .mp4).
     - Controls: Play/Pause button positioned at 50% vertical bias for accessibility.
@@ -32,6 +43,12 @@ PPGVideoPlayer is a kid-friendly video player designed for offline use on Androi
 ### 3.3 Video Playback & Controls
 - **SeekBar**: Custom style with white unplayed area (6dp thick) and red played area.
 - **Navigation**: Selecting a video from the film strip immediately transitions to 100% full-screen playback.
+- **Smart Playback Position**:
+    - If VPC < threshold (default 5): Start from 0:00.
+    - If VPC >= threshold and duration < 5 mins: Start from 0:00.
+    - If VPC >= threshold and duration >= 5 mins: Start from a random position.
+- **Active Screen Time (AST)**: App monitors active playback duration. When the limit (default 30m) is reached, it displays an overlay and closes.
+- **Cool Off Time**: After reaching the AST limit, a cool-off period (default 15m) is enforced before the app allows further use.
 - **Gesture Zones (Full Screen)**: The screen is divided into three horizontal zones:
     - **Left (30%)**: Double-tap to rewind -10s, triple-tap for -20s, quadruple-tap for -30s. Video remains full-screen.
     - **Middle (40%)**: Single-tap to show PAUSE button, shrink video to 75%, and display film strip (Screen-3).

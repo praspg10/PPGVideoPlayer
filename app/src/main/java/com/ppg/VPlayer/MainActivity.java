@@ -35,6 +35,16 @@ public class MainActivity extends AppCompatActivity {
     private ActivityMainBinding binding;
     private VideoViewModel videoViewModel;
     private android.content.BroadcastReceiver screenOffReceiver;
+    private int sessionActiveMins = 0;
+    private final android.os.Handler astHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable astRunnable = new Runnable() {
+        @Override
+        public void run() {
+            sessionActiveMins++;
+            checkASTLimit();
+            astHandler.postDelayed(this, 60000); // every minute
+        }
+    };
 
     private final ActivityResultLauncher<Intent> folderPickerLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -137,11 +147,18 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         hideSystemUI();
+        if (checkCoolTime()) {
+            // Cool time active, app will close or show message
+        } else {
+            astHandler.removeCallbacks(astRunnable);
+            astHandler.postDelayed(astRunnable, 60000);
+        }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        astHandler.removeCallbacks(astRunnable);
         android.os.PowerManager pm = (android.os.PowerManager) getSystemService(android.content.Context.POWER_SERVICE);
         if (pm != null && !pm.isInteractive()) {
             Log.d("PPG_NAV", "Screen is off in onPause, clearing cache and finishing");
@@ -149,6 +166,51 @@ public class MainActivity extends AppCompatActivity {
             finishAndRemoveTask();
             System.exit(0);
         }
+    }
+
+    private void checkASTLimit() {
+        int limit = SettingsManager.getASTLimit(this);
+        if (sessionActiveMins >= limit) {
+            SettingsManager.saveLastLimitTimestamp(this, System.currentTimeMillis());
+            showASTOverDialog();
+        }
+    }
+
+    private boolean checkCoolTime() {
+        long lastReached = SettingsManager.getLastLimitTimestamp(this);
+        if (lastReached == 0) return false;
+
+        int coolTimeMins = SettingsManager.getCoolTime(this);
+        long diff = System.currentTimeMillis() - lastReached;
+        if (diff < (long) coolTimeMins * 60 * 1000) {
+            showCoolTimeDialog((int) ((coolTimeMins * 60 * 1000 - diff) / 60000) + 1);
+            return true;
+        }
+        return false;
+    }
+
+    private void showASTOverDialog() {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Screen Time Over")
+                .setMessage("Your active screen time is over. Please take a break!")
+                .setCancelable(false)
+                .setPositiveButton("OK", (d, w) -> {
+                    finishAndRemoveTask();
+                    System.exit(0);
+                })
+                .show();
+    }
+
+    private void showCoolTimeDialog(int remainingMins) {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Cool Off Time")
+                .setMessage("Please wait " + remainingMins + " more minutes before playing again.")
+                .setCancelable(false)
+                .setPositiveButton("OK", (d, w) -> {
+                    finishAndRemoveTask();
+                    System.exit(0);
+                })
+                .show();
     }
 
     @Override
@@ -181,20 +243,51 @@ public class MainActivity extends AppCompatActivity {
         TextView txtFolder = dialogView.findViewById(R.id.txtCurrentFolder);
         TextView txtCount = dialogView.findViewById(R.id.txtVideoCount);
         ProgressBar progressBar = dialogView.findViewById(R.id.dialogProgressBar);
-        android.view.View btnClose = dialogView.findViewById(R.id.btnClose);
+        
+        android.view.View btnCloseX = dialogView.findViewById(R.id.btnCloseX);
         android.widget.Button btnSelect = dialogView.findViewById(R.id.btnSelectFolder);
         android.widget.Button btnRescan = dialogView.findViewById(R.id.btnRescan);
+        android.widget.Button btnSave = dialogView.findViewById(R.id.btnSave);
+        
+        androidx.appcompat.widget.SwitchCompat switchRecent = dialogView.findViewById(R.id.switchShowRecent);
+        android.widget.EditText editAST = dialogView.findViewById(R.id.editAST);
+        android.widget.EditText editCoolTime = dialogView.findViewById(R.id.editCoolTime);
+        android.widget.EditText editRandom = dialogView.findViewById(R.id.editRandomThreshold);
+
+        // Load current values
+        switchRecent.setChecked(SettingsManager.isShowRecentEnabled(this));
+        editAST.setText(String.valueOf(SettingsManager.getASTLimit(this)));
+        editCoolTime.setText(String.valueOf(SettingsManager.getCoolTime(this)));
+        editRandom.setText(String.valueOf(SettingsManager.getRandomThreshold(this)));
 
         // Observe changes while dialog is open
         videoViewModel.getCurrentFolderPath().observe(this, folderPath -> {
-            String path = (folderPath != null ? folderPath : "None");
-            txtFolder.setText(Html.fromHtml("<b>Current Folder: </b>" + path, Html.FROM_HTML_MODE_LEGACY));
+            String displayPath = "None";
+            if (folderPath != null) {
+                try {
+                    String decoded = Uri.decode(folderPath);
+                    String pathPart = decoded;
+                    if (decoded.contains(":")) {
+                        pathPart = decoded.substring(decoded.lastIndexOf(":") + 1);
+                    }
+                    String[] segments = pathPart.split("/");
+                    if (segments.length >= 2) {
+                        displayPath = segments[segments.length - 2] + "/" + segments[segments.length - 1];
+                    } else {
+                        displayPath = pathPart;
+                    }
+                } catch (Exception e) {
+                    displayPath = folderPath;
+                }
+            }
+            txtFolder.setText(Html.fromHtml("<b>Current Folder: </b>" + displayPath, Html.FROM_HTML_MODE_LEGACY));
         });
 
         videoViewModel.getIsScanning().observe(this, isScanning -> {
             progressBar.setVisibility(isScanning ? android.view.View.VISIBLE : android.view.View.GONE);
             btnSelect.setEnabled(!isScanning);
             btnRescan.setEnabled(!isScanning);
+            btnSave.setEnabled(!isScanning);
         });
 
         videoViewModel.getVideos().observe(this, videos -> {
@@ -202,8 +295,21 @@ public class MainActivity extends AppCompatActivity {
             txtCount.setText(Html.fromHtml("<b>Scanned Files Count: </b>" + count, Html.FROM_HTML_MODE_LEGACY));
         });
 
-        btnClose.setOnClickListener(v -> dialog.dismiss());
-        
+        btnCloseX.setOnClickListener(v -> dialog.dismiss());
+
+        btnSave.setOnClickListener(v -> {
+            try {
+                SettingsManager.saveShowRecent(this, switchRecent.isChecked());
+                SettingsManager.saveASTLimit(this, Integer.parseInt(editAST.getText().toString()));
+                SettingsManager.saveCoolTime(this, Integer.parseInt(editCoolTime.getText().toString()));
+                SettingsManager.saveRandomThreshold(this, Integer.parseInt(editRandom.getText().toString()));
+                Toast.makeText(this, "Settings Saved", Toast.LENGTH_SHORT).show();
+            } catch (Exception e) {
+                Toast.makeText(this, "Invalid input", Toast.LENGTH_SHORT).show();
+            }
+            dialog.dismiss();
+        });
+
         btnSelect.setOnClickListener(v -> {
             Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
             folderPickerLauncher.launch(intent);

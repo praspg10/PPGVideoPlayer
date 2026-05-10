@@ -17,6 +17,7 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
     private final List<Video> videos;
     private final OnVideoClickListener listener;
     private final boolean isSmall;
+    private boolean showVpc = false;
 
     public interface OnVideoClickListener {
         void onVideoClick(Video video, int position);
@@ -30,6 +31,10 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
         this.videos = videos;
         this.listener = listener;
         this.isSmall = isSmall;
+    }
+
+    public void setShowVpc(boolean show) {
+        this.showVpc = show;
     }
 
     @NonNull
@@ -52,6 +57,15 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
 
         if (holder.duration != null) {
             holder.duration.setText(formatDuration(video.getDuration()));
+        }
+
+        if (holder.vpcBadge != null) {
+            if (showVpc && video.getPlayCount() > 0) {
+                holder.vpcBadge.setVisibility(View.VISIBLE);
+                holder.vpcBadge.setText(String.valueOf(video.getPlayCount()));
+            } else {
+                holder.vpcBadge.setVisibility(View.GONE);
+            }
         }
 
         int placeholder = video.getName().toLowerCase().endsWith(".mp3") 
@@ -92,12 +106,14 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
         ImageView thumbnail;
         TextView title;
         TextView duration;
+        TextView vpcBadge;
 
         VideoViewHolder(@NonNull View itemView) {
             super(itemView);
             thumbnail = itemView.findViewById(R.id.thumbnail);
             title = itemView.findViewById(R.id.title);
             duration = itemView.findViewById(R.id.duration);
+            vpcBadge = itemView.findViewById(R.id.vpcBadge);
         }
     }
 }

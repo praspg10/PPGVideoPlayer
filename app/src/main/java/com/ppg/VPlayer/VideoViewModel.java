@@ -63,6 +63,20 @@ public class VideoViewModel extends AndroidViewModel {
         videos.setValue(new ArrayList<>());
     }
 
+    public void incrementPlayCount(android.net.Uri uri) {
+        if (sessionVideos != null) {
+            for (Video v : sessionVideos) {
+                if (v.getUri().equals(uri)) {
+                    v.incrementPlayCount();
+                    // Persist updated list with play counts
+                    SettingsManager.saveVideoList(getApplication(), sessionVideos);
+                    videos.postValue(sessionVideos);
+                    break;
+                }
+            }
+        }
+    }
+
     public void loadVideos(String folderPath) {
         if (folderPath == null) return;
         isScanning.setValue(true);

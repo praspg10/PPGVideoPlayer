@@ -154,6 +154,14 @@ public class VideoListFragment extends Fragment {
         Set<String> folderSet = new LinkedHashSet<>();
         folderSet.add("All");
         
+        // Add Recent if enabled and there are videos with play count > 0
+        if (SettingsManager.isShowRecentEnabled(requireContext())) {
+            boolean hasPlayed = allVideos.stream().anyMatch(v -> v.getPlayCount() > 0);
+            if (hasPlayed) {
+                folderSet.add("Recent");
+            }
+        }
+        
         if (allVideos != null && !allVideos.isEmpty()) {
             for (Video v : allVideos) {
                 folderSet.add(v.getFolderName());
@@ -181,6 +189,11 @@ public class VideoListFragment extends Fragment {
         List<Video> filtered;
         if (category.equals("All")) {
             filtered = allVideos;
+        } else if (category.equals("Recent")) {
+            filtered = allVideos.stream()
+                    .filter(v -> v.getPlayCount() > 0)
+                    .sorted((v1, v2) -> Integer.compare(v2.getPlayCount(), v1.getPlayCount()))
+                    .collect(Collectors.toList());
         } else {
             filtered = allVideos.stream()
                     .filter(v -> v.getFolderName().equals(category))
@@ -199,6 +212,11 @@ public class VideoListFragment extends Fragment {
             
             Navigation.findNavController(requireView()).navigate(R.id.action_VideoListFragment_to_VideoPlayerFragment, args);
         });
+        
+        if (category.equals("Recent")) {
+            adapter.setShowVpc(true);
+        }
+
         binding.recyclerView.setAdapter(adapter);
         
         binding.emptyView.setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);

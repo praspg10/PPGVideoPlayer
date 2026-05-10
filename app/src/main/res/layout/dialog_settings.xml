@@ -3,7 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="16dp"
+    android:minWidth="660dp"
+    android:padding="24dp"
     android:background="@android:color/white">
 
     <TextView
@@ -11,33 +12,136 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Settings"
-        android:textSize="20sp"
+        android:textSize="26sp"
         android:textStyle="bold"
         android:textColor="@android:color/black"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <TextView
-        android:id="@+id/txtCurrentFolder"
+    <ImageButton
+        android:id="@+id/btnCloseX"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        android:scaleType="fitCenter"
+        android:padding="4dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:contentDescription="Close" />
+
+    <ScrollView
+        android:id="@+id/settingsScroll"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="Current Folder: None"
-        android:textColor="@android:color/black"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/dialogTitle" />
+        app:layout_constraintTop_toBottomOf="@id/dialogTitle">
 
-    <TextView
-        android:id="@+id/txtVideoCount"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="Scanned Files Count: 0"
-        android:textColor="@android:color/black"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/txtCurrentFolder" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- 1. Recently Played Videos Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingBottom="12dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Recently Played Videos in 'Recent' tabs"
+                    android:textColor="@android:color/black"
+                    android:textSize="18sp" />
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/switchShowRecent"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="false" />
+            </LinearLayout>
+
+            <!-- 2. AST Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingBottom="12dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Active Screen Time (AST) in mins"
+                    android:textColor="@android:color/black"
+                    android:textSize="18sp" />
+                <EditText
+                    android:id="@+id/editAST"
+                    android:layout_width="80dp"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:text="30"
+                    android:textAlignment="center"
+                    android:textSize="18sp"
+                    android:textColor="@android:color/black" />
+            </LinearLayout>
+
+            <!-- 3. CoolTime Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingBottom="12dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="AST CoolTime in mins"
+                    android:textColor="@android:color/black"
+                    android:textSize="18sp" />
+                <EditText
+                    android:id="@+id/editCoolTime"
+                    android:layout_width="80dp"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:text="15"
+                    android:textAlignment="center"
+                    android:textSize="18sp"
+                    android:textColor="@android:color/black" />
+            </LinearLayout>
+
+            <!-- 4. Random Position Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingBottom="12dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Start video at a random position after [X] repeats (PlayCount)"
+                    android:textColor="@android:color/black"
+                    android:textSize="18sp" />
+                <EditText
+                    android:id="@+id/editRandomThreshold"
+                    android:layout_width="80dp"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:text="5"
+                    android:textAlignment="center"
+                    android:textSize="18sp"
+                    android:textColor="@android:color/black" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
 
     <ProgressBar
         android:id="@+id/dialogProgressBar"
@@ -49,7 +153,32 @@
         android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/txtVideoCount" />
+        app:layout_constraintTop_toBottomOf="@id/settingsScroll" />
+
+    <!-- 5. Current Folder & Count at bottom -->
+    <TextView
+        android:id="@+id/txtCurrentFolder"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Current Folder: None"
+        android:textColor="@android:color/black"
+        android:textSize="16sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/dialogProgressBar" />
+
+    <TextView
+        android:id="@+id/txtVideoCount"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Scanned Files Count: 0"
+        android:textColor="@android:color/black"
+        android:textSize="16sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/txtCurrentFolder" />
 
     <LinearLayout
         android:id="@+id/buttonContainer"
@@ -57,45 +186,45 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:orientation="horizontal"
-        android:gravity="center_vertical"
+        android:gravity="center"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/dialogProgressBar">
+        app:layout_constraintTop_toBottomOf="@id/txtVideoCount">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSelectFolder"
             style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1.2"
-            android:text="Select Folder to Scan"
+            android:text="VIDEO SOURCE"
             android:textSize="16sp"
             android:textColor="@color/ytk_primary_red"
-            android:textAllCaps="false"
-            android:padding="0dp" />
+            android:textAllCaps="true"
+            android:padding="8dp"
+            android:layout_marginHorizontal="8dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRescan"
             style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="0.8"
-            android:text="Rescan Now"
+            android:text="RESCAN"
             android:textSize="16sp"
             android:textColor="@color/ytk_primary_red"
-            android:textAllCaps="false"
-            android:padding="0dp" />
+            android:textAllCaps="true"
+            android:padding="8dp"
+            android:layout_marginHorizontal="8dp" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnClose"
+            android:id="@+id/btnSave"
             style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="0.6"
-            android:text="Close"
+            android:text="SAVE"
             android:textSize="16sp"
             android:textColor="@color/ytk_primary_red"
-            android:textAllCaps="false"
-            android:padding="0dp" />
+            android:textAllCaps="true"
+            android:padding="8dp"
+            android:layout_marginHorizontal="8dp" />
 
     </LinearLayout>
 
