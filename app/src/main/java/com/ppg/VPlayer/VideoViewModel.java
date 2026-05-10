@@ -13,6 +13,8 @@ public class VideoViewModel extends AndroidViewModel {
     private final MutableLiveData<List<Video>> videos = new MutableLiveData<>();
     private final MutableLiveData<Boolean> isScanning = new MutableLiveData<>(false);
     private final MutableLiveData<String> currentFolderPath = new MutableLiveData<>();
+    private final MutableLiveData<Integer> totalPlaybackSeconds = new MutableLiveData<>(0);
+    private final MutableLiveData<Boolean> isScreenTimeOver = new MutableLiveData<>(false);
     private List<Video> sessionVideos = new ArrayList<>();
 
     public VideoViewModel(@NonNull Application application) {
@@ -31,6 +33,28 @@ public class VideoViewModel extends AndroidViewModel {
 
     public LiveData<String> getCurrentFolderPath() {
         return currentFolderPath;
+    }
+
+    public LiveData<Integer> getTotalPlaybackSeconds() {
+        return totalPlaybackSeconds;
+    }
+
+    public void incrementPlaybackSeconds() {
+        Integer current = totalPlaybackSeconds.getValue();
+        if (current == null) current = 0;
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+            totalPlaybackSeconds.setValue(current + 1);
+        } else {
+            totalPlaybackSeconds.postValue(current + 1);
+        }
+    }
+
+    public LiveData<Boolean> getIsScreenTimeOver() {
+        return isScreenTimeOver;
+    }
+
+    public void setScreenTimeOver(boolean over) {
+        isScreenTimeOver.postValue(over);
     }
 
     public void updateFolderPath(String path) {

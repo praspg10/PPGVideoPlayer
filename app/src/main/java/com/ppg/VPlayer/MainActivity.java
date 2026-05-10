@@ -35,16 +35,6 @@ public class MainActivity extends AppCompatActivity {
     private ActivityMainBinding binding;
     private VideoViewModel videoViewModel;
     private android.content.BroadcastReceiver screenOffReceiver;
-    private int sessionActiveMins = 0;
-    private final android.os.Handler astHandler = new android.os.Handler(android.os.Looper.getMainLooper());
-    private final Runnable astRunnable = new Runnable() {
-        @Override
-        public void run() {
-            sessionActiveMins++;
-            checkASTLimit();
-            astHandler.postDelayed(this, 60000); // every minute
-        }
-    };
 
     private final ActivityResultLauncher<Intent> folderPickerLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -86,6 +76,17 @@ public class MainActivity extends AppCompatActivity {
         videoViewModel.getIsScanning().observe(this, isScanning -> {
             if (isScanning) {
                 Toast.makeText(this, "Scanning videos...", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        videoViewModel.getTotalPlaybackSeconds().observe(this, totalSecs -> {
+            int limit = SettingsManager.getASTLimit(this);
+            if (totalSecs / 60 >= limit) {
+                // Requirement 4: Limit reached
+                Log.d("PPG_AST", "AST limit reached: " + limit + " mins");
+                videoViewModel.setScreenTimeOver(true);
+                SettingsManager.saveLastLimitTimestamp(this, System.currentTimeMillis());
+                showASTOverOverlay();
             }
         });
 
@@ -148,17 +149,13 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         hideSystemUI();
         if (checkCoolTime()) {
-            // Cool time active, app will close or show message
-        } else {
-            astHandler.removeCallbacks(astRunnable);
-            astHandler.postDelayed(astRunnable, 60000);
+            // Cool time active, app will remain blocked by overlay/dialog and then exit
         }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        astHandler.removeCallbacks(astRunnable);
         android.os.PowerManager pm = (android.os.PowerManager) getSystemService(android.content.Context.POWER_SERVICE);
         if (pm != null && !pm.isInteractive()) {
             Log.d("PPG_NAV", "Screen is off in onPause, clearing cache and finishing");
@@ -169,11 +166,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void checkASTLimit() {
-        int limit = SettingsManager.getASTLimit(this);
-        if (sessionActiveMins >= limit) {
-            SettingsManager.saveLastLimitTimestamp(this, System.currentTimeMillis());
-            showASTOverDialog();
-        }
+        // Now handled by observer in onCreate
     }
 
     private boolean checkCoolTime() {
@@ -181,30 +174,47 @@ public class MainActivity extends AppCompatActivity {
         if (lastReached == 0) return false;
 
         int coolTimeMins = SettingsManager.getCoolTime(this);
-        long diff = System.currentTimeMillis() - lastReached;
-        if (diff < (long) coolTimeMins * 60 * 1000) {
-            showCoolTimeDialog((int) ((coolTimeMins * 60 * 1000 - diff) / 60000) + 1);
+        long diffMs = System.currentTimeMillis() - lastReached;
+        long coolTimeMs = (long) coolTimeMins * 60 * 1000;
+
+        if (diffMs < coolTimeMs) {
+            // Requirement 4e: Still under cool time
+            int remainingMins = (int) ((coolTimeMs - diffMs) / 60000) + 1;
+            showStillInCoolTimeDialog(remainingMins);
             return true;
+        } else {
+            // Requirement 4f: After cool time ends
+            SettingsManager.saveLastLimitTimestamp(this, 0); // set LSTOMsg = null
+            return false;
         }
-        return false;
     }
 
-    private void showASTOverDialog() {
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Screen Time Over")
-                .setMessage("Your active screen time is over. Please take a break!")
+    private void showASTOverOverlay() {
+        // Requirement 4c: Display popup overlay
+        android.view.View overlay = getLayoutInflater().inflate(R.layout.dialog_overlay, null);
+        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+                .setView(overlay)
                 .setCancelable(false)
-                .setPositiveButton("OK", (d, w) -> {
-                    finishAndRemoveTask();
-                    System.exit(0);
-                })
-                .show();
+                .create();
+
+        int limit = SettingsManager.getASTLimit(this);
+        TextView msg1 = overlay.findViewById(R.id.txtMessage1);
+        msg1.setText(limit + " mins Screen time is over");
+
+        overlay.findViewById(R.id.btnOverlayOk).setOnClickListener(v -> {
+            // Requirement 4d: Exit app
+            dialog.dismiss();
+            finishAndRemoveTask();
+            System.exit(0);
+        });
+
+        dialog.show();
     }
 
-    private void showCoolTimeDialog(int remainingMins) {
+    private void showStillInCoolTimeDialog(int remainingMins) {
         new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setTitle("Cool Off Time")
-                .setMessage("Please wait " + remainingMins + " more minutes before playing again.")
+                .setMessage("Still under Cool Time.... \nPlease wait " + remainingMins + " more minutes.")
                 .setCancelable(false)
                 .setPositiveButton("OK", (d, w) -> {
                     finishAndRemoveTask();

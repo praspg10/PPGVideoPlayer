@@ -61,6 +61,14 @@ public class VideoPlayerFragment extends Fragment {
         setupControls();
         setupGestureZones();
 
+        viewModel.getIsScreenTimeOver().observe(getViewLifecycleOwner(), over -> {
+            if (over && player != null) {
+                player.pause();
+                // Requirement 4a: Pause and navigate to Screen-1
+                performBackNavigation();
+            }
+        });
+
         if (getArguments() != null) {
             playlistUris = getArguments().getStringArrayList("playlist");
             currentPosition = getArguments().getInt("videoPosition", 0);
@@ -130,6 +138,10 @@ public class VideoPlayerFragment extends Fragment {
                 long current = player.getCurrentPosition();
                 binding.seekBar.setProgress((int) current);
                 binding.txtCurrentTime.setText(formatTime(current));
+                
+                // Track cumulative playback time (Requirement 4)
+                viewModel.incrementPlaybackSeconds();
+
                 hideHandler.postDelayed(this, 1000);
             }
         }
