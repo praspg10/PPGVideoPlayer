@@ -29,9 +29,14 @@ PPGVideoPlayer is a kid-friendly video player designed for offline use on Androi
     - Stay Awake: Screen stays at full brightness and never locks during playback.
     - Power Button: App stops playback, clears temporary cache, and closes immediately when the screen is turned off (Power button pressed).
 
-### 3.3 Video Playback
+### 3.3 Video Playback & Controls
 - **SeekBar**: Custom style with white unplayed area (6dp thick) and red played area.
 - **Navigation**: Selecting a video from the film strip immediately transitions to 100% full-screen playback.
+- **Gesture Zones (Full Screen)**: The screen is divided into three horizontal zones:
+    - **Left (30%)**: Double-tap to rewind -10s, triple-tap for -20s, quadruple-tap for -30s. Video remains full-screen.
+    - **Middle (40%)**: Single-tap to show PAUSE button, shrink video to 75%, and display film strip (Screen-3).
+    - **Right (30%)**: Double-tap to fast-forward +10s, triple-tap for +20s, quadruple-tap for +30s. Video remains full-screen.
+- **Visual Feedback**: Seeking via gestures displays a temporary message at the bottom (e.g., "+10 sec" or "-20 sec") which fades out automatically.
 - **Stability**: Robust back button functionality (<-) that returns to Screen-1 with the same list state, optimized for Fire OS 8.
 
 ## 4. Non-Functional Requirements

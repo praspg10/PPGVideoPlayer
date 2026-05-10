@@ -33,6 +33,13 @@ public class VideoPlayerFragment extends Fragment {
     private List<String> playlistUris = new ArrayList<>();
     private int currentPosition = 0;
     private boolean isSwitchingVideo = false;
+    private boolean isSeeking = false;
+
+    // Gesture logic
+    private int tapCount = 0;
+    private String lastTapZone = "";
+    private final Handler tapHandler = new Handler(Looper.getMainLooper());
+    private final Runnable tapTimeoutRunnable = this::processTaps;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -52,6 +59,7 @@ public class VideoPlayerFragment extends Fragment {
         setupPlayer();
         setupFilmStrip();
         setupControls();
+        setupGestureZones();
 
         if (getArguments() != null) {
             playlistUris = getArguments().getStringArrayList("playlist");
@@ -67,7 +75,10 @@ public class VideoPlayerFragment extends Fragment {
         player = new ExoPlayer.Builder(requireContext()).build();
         binding.playerView.setPlayer(player);
         
-        binding.playerView.setOnClickListener(v -> toggleControls());
+        // Ensure the player view itself doesn't consume clicks meant for our zones
+        binding.playerView.setClickable(false);
+        
+        // Removed old single-tap listener from playerView
         binding.controlsContainer.setOnClickListener(v -> hideControls());
         
         binding.seekBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
@@ -94,7 +105,7 @@ public class VideoPlayerFragment extends Fragment {
                 } else {
                     cancelHideTimer();
                     stopProgressUpdate();
-                    if (!isSwitchingVideo) showControls();
+                    if (!isSwitchingVideo && !isSeeking) showControls();
                 }
             }
 
@@ -133,6 +144,95 @@ public class VideoPlayerFragment extends Fragment {
         hideHandler.removeCallbacks(progressUpdateRunnable);
     }
 
+    private void setupGestureZones() {
+        binding.touchLeft.setOnClickListener(v -> onZoneTapped("LEFT"));
+        binding.touchMiddle.setOnClickListener(v -> onZoneTapped("MIDDLE"));
+        binding.touchRight.setOnClickListener(v -> onZoneTapped("RIGHT"));
+    }
+
+    private void onZoneTapped(String zone) {
+        Log.d("PPG_GESTURE", "onZoneTapped: " + zone + " (Controls visible: " + (binding.controlsContainer.getVisibility() == View.VISIBLE) + ")");
+        // If controls are visible, we should probably ignore these zones or hide controls
+        if (binding.controlsContainer.getVisibility() == View.VISIBLE) {
+            hideControls();
+            return;
+        }
+
+        if (!zone.equals(lastTapZone)) {
+            tapHandler.removeCallbacks(tapTimeoutRunnable);
+            processTaps(); // Process previous zone if any
+            tapCount = 0;
+        }
+        lastTapZone = zone;
+        tapCount++;
+        Log.d("PPG_GESTURE", "tapCount: " + tapCount + " for zone: " + lastTapZone);
+        tapHandler.removeCallbacks(tapTimeoutRunnable);
+        tapHandler.postDelayed(tapTimeoutRunnable, 400); // 400ms window for kid-friendly multi-tap
+    }
+
+    private void processTaps() {
+        if (tapCount == 0) return;
+        
+        int count = tapCount;
+        String zone = lastTapZone;
+        Log.d("PPG_GESTURE", "processTaps: zone=" + zone + ", count=" + count);
+        tapCount = 0;
+        lastTapZone = "";
+
+        if (zone.equals("MIDDLE")) {
+            if (count == 1) {
+                Log.d("PPG_GESTURE", "MIDDLE single tap: showing controls");
+                // Requirement 1a: Show Pause button and shrink to 75%. 
+                // We show controls (which includes the button) and keep video playing.
+                showControls();
+            }
+        } else if (zone.equals("LEFT")) {
+            if (count >= 2) {
+                int seekSecs = (count == 2) ? 10 : (count == 3) ? 20 : 30;
+                Log.d("PPG_GESTURE", "LEFT multi-tap (" + count + "): seeking -" + seekSecs);
+                seekRelative(-seekSecs);
+            }
+        } else if (zone.equals("RIGHT")) {
+            if (count >= 2) {
+                int seekSecs = (count == 2) ? 10 : (count == 3) ? 20 : 30;
+                Log.d("PPG_GESTURE", "RIGHT multi-tap (" + count + "): seeking +" + seekSecs);
+                seekRelative(seekSecs);
+            }
+        }
+    }
+
+    private void seekRelative(int seconds) {
+        if (player != null) {
+            isSeeking = true;
+            long newPos = player.getCurrentPosition() + (seconds * 1000L);
+            if (newPos < 0) newPos = 0;
+            if (newPos > player.getDuration()) newPos = player.getDuration();
+            player.seekTo(newPos);
+            
+            // Feedback message
+            String msg = (seconds > 0 ? "+" : "") + seconds + " sec";
+            if (binding != null) {
+                binding.txtSeekFeedback.setText(msg);
+                binding.txtSeekFeedback.setVisibility(View.VISIBLE);
+                binding.txtSeekFeedback.setAlpha(1.0f);
+                binding.txtSeekFeedback.animate()
+                        .alpha(0.0f)
+                        .setDuration(1000)
+                        .setStartDelay(500)
+                        .withEndAction(() -> {
+                            if (binding != null) binding.txtSeekFeedback.setVisibility(View.GONE);
+                        })
+                        .start();
+            }
+
+            // After seeking, ensure it keeps playing if it was playing or just start it
+            player.play();
+            
+            // Clear the flag after a short delay to allow onIsPlayingChanged to settle
+            tapHandler.postDelayed(() -> isSeeking = false, 500);
+        }
+    }
+
     private String formatTime(long ms) {
         if (ms <= 0) return "00:00";
         // Sanity check: if duration is longer than 24 hours, it's likely a metadata error
@@ -149,15 +249,6 @@ public class VideoPlayerFragment extends Fragment {
         if (playlistUris != null && currentPosition + 1 < playlistUris.size()) {
             currentPosition++;
             playVideo(Uri.parse(playlistUris.get(currentPosition)));
-        } else {
-            showControls();
-        }
-    }
-
-    private void toggleControls() {
-        if (binding == null) return;
-        if (binding.controlsContainer.getVisibility() == View.VISIBLE) {
-            hideControls();
         } else {
             showControls();
         }

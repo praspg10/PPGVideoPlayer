@@ -30,6 +30,12 @@ This document describes the functional behavior and technical architecture of PP
 ### 3.3 VideoPlayerFragment
 - Implements safety checks (binding null-checks) for background tasks.
 - Uses `setKeepScreenOn(true)` at the view level for Fire OS compatibility.
+- **Gesture Control System**: Implements a three-zone transparent overlay for player interaction:
+    - **Zones**: Defined using `app:layout_constraintWidth_percent` (Left: 0.3, Middle: 0.4, Right: 0.3).
+    - **Multi-tap Logic**: Uses a `Handler` with a 400ms window to count consecutive taps.
+    - **Seeking**: Relative seek logic (`player.getCurrentPosition() + delta`) with boundary checks.
+    - **Feedback**: A dynamic `TextView` (`txtSeekFeedback`) that uses `ViewPropertyAnimator` for smooth fade-out after seeks.
+- **Screen Transitions**: Handles the transition from 100% full-screen (Screen-2) to the shrunken 75% view with film strip (Screen-3) via the middle-zone single tap.
 - Disables forced orientation changes to prevent activity recreation crashes.
 - Custom SeekBar with layer-list drawable (6dp thick).
 

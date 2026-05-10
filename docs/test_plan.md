@@ -45,6 +45,17 @@ Testing covers the core functionality of manual video discovery, persistent rand
 | TC-19 | Rescan Update | Adding a file to storage and clicking "Rescan Now" updates the Scanned Files Count. |
 | TC-20 | SVL Preservation | Closing app via Power or (X) clears temporary cache but keeps Scanned Video List safe. |
 
+### 3.5 Player Gestures (Screen-2/3)
+| ID | Description | Expected Result |
+|---|---|---|
+| TC-21 | Middle Single Tap | Shrinks video to 75%, shows PAUSE button and Film Strip (Screen-3). |
+| TC-22 | Left Double Tap | Video rewinds -10s and continues playing. Feedback "-10 sec" appears. |
+| TC-23 | Left Triple Tap | Video rewinds -20s and continues playing. Feedback "-20 sec" appears. |
+| TC-24 | Right Double Tap | Video fast-forwards +10s and continues playing. Feedback "+10 sec" appears. |
+| TC-25 | Right Triple Tap | Video fast-forwards +20s and continues playing. Feedback "+20 sec" appears. |
+| TC-26 | Quadruple Taps | Tapping 4 times triggers +/- 30s seek. Feedback displays correctly. |
+| TC-27 | Tap Isolation | Double tapping Left or Right does NOT shrink the video or show the pause button. |
+
 ## 4. Bug Reporting
 Bugs should be documented with:
 - Logcat entries (filtered by `tag:PPG_NAV`).
