@@ -221,8 +221,13 @@ public class MainActivity extends AppCompatActivity {
 
             TextView msg1 = overlay.findViewById(R.id.txtMessage1);
             TextView msg2 = overlay.findViewById(R.id.txtMessage2);
-            if (msg1 != null) msg1.setText("Still under Cool Off Period....");
-            if (msg2 != null) msg2.setText("Please wait " + remainingMins + " more minutes.");
+            if (msg1 != null) {
+                msg1.setText("Still under Cool Off Period");
+            }
+            if (msg2 != null) {
+                String msg = "Please wait " + remainingMins + " more minutes";
+                msg2.setText(msg);
+            }
 
             overlay.findViewById(R.id.btnOverlayOk).setOnClickListener(v -> {
                 finishAndRemoveTask();
