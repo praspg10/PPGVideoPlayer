@@ -13,7 +13,7 @@ Testing covers the core functionality of manual video discovery, persistent rand
 | ID | Description | Expected Result |
 |---|---|---|
 | TC-01 | First Launch (No config) | Displays "All" link and "No videos found" message. No auto-scan. |
-| TC-02 | Select Folder and RESCAN | Popup displays "Scanned Files Count" updating in real-time. Grid populates with random order. |
+| TC-02 | Select Folder and Rescan | Popup displays "Scanned Files Count" updating in real-time. Grid populates with random order. |
 | TC-03 | Relaunch App | SVL reloads instantly with the same random order as previous session. |
 | TC-04 | Folder Navigation | Link-style tabs change color to red when selected. List filtered by folder. |
 | TC-05 | Return to "All" | List is reshuffled with a new random sequence. |
@@ -38,25 +38,12 @@ Testing covers the core functionality of manual video discovery, persistent rand
 | TC-16 | Close (X) App | Tapping (X) on Screen-1 clears cache and exits the app. |
 | TC-17 | System Nav Icons | Swipe from edge reveals navigation icons; icons are white on a black background. |
 
-### 3.4 Data Integrity & Playback Logic
+### 3.4 Data Integrity
 | ID | Description | Expected Result |
 |---|---|---|
 | TC-18 | Corrupted Duration | Video with invalid metadata shows "00:00" instead of 8-digit numbers. |
-| TC-19 | RESCAN Update | Adding a file to storage and clicking "RESCAN" updates the Scanned Files Count. |
-| TC-20 | VPC Persistence | Playing a video multiple times increases its VPC badge on the 'Recent' tab. |
-| TC-21 | Smart Start (Short) | VPC > 5 for a < 5min video. Playback starts at 0:00. |
-| TC-22 | Smart Start (Long) | VPC > 5 for a > 5min video. Playback starts at a random position. |
-| TC-23 | AST Lockout | Watch videos for > 30 mins (default). App shows dialog and closes. |
-| TC-24 | Cool Off Period | Reopen app immediately after AST lockout. App displays remaining minutes and closes. |
-
-### 3.5 Settings & UI Polish
-| ID | Description | Expected Result |
-|---|---|---|
-| TC-25 | Settings Size | Dialog is significantly larger and takes up central screen space. |
-| TC-26 | Folder Truncation | Path shows "Parent/Selected" only. |
-| TC-27 | Recent Toggle | Disabling 'Recently Played Videos' hides the 'Recent' tab on Screen-1. |
-| TC-28 | SAVE Button | Clicking 'SAVE' dismisses the dialog and persists all field values. |
-| TC-29 | X Button | Clicking 'X' in corner dismisses the dialog without applying changes. |
+| TC-19 | Rescan Update | Adding a file to storage and clicking "Rescan Now" updates the Scanned Files Count. |
+| TC-20 | SVL Preservation | Closing app via Power or (X) clears temporary cache but keeps Scanned Video List safe. |
 
 ## 4. Bug Reporting
 Bugs should be documented with:

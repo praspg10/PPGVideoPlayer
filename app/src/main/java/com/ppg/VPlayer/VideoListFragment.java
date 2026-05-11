@@ -60,7 +60,6 @@ public class VideoListFragment extends Fragment {
         });
 
         binding.btnCloseApp.setOnClickListener(v -> {
-            // Clear all cache and close the app
             SettingsManager.clearCache(requireContext());
             requireActivity().finishAndRemoveTask();
             System.exit(0);
@@ -69,14 +68,12 @@ public class VideoListFragment extends Fragment {
         setupTabs();
         setupRecyclerView();
         
-        // RE-FIX: Populate videos and THEN update categories to ensure tabs show up immediately
         List<Video> currentVideos = viewModel.getVideos().getValue();
         if (currentVideos != null) {
             allVideos = new ArrayList<>(currentVideos);
             updateCategories();
             filterVideos(currentCategory);
             
-            // Ensure the correct tab is visually selected
             for (int i = 0; i < binding.tabLayout.getTabCount(); i++) {
                 TabLayout.Tab tab = binding.tabLayout.getTabAt(i);
                 if (tab != null && tab.getText() != null && currentCategory.equals(tab.getText().toString())) {
@@ -87,6 +84,16 @@ public class VideoListFragment extends Fragment {
         }
 
         checkPermissionAndLoad();
+        setupASTTimer();
+    }
+
+    private void setupASTTimer() {
+        viewModel.getTotalPlaybackSeconds().observe(getViewLifecycleOwner(), totalSecs -> {
+            int currentMins = totalSecs / 60;
+            int currentSecs = totalSecs % 60;
+            String timeStr = String.format(java.util.Locale.getDefault(), "%02d:%02d", currentMins, currentSecs);
+            if (binding != null) binding.txtASTTimer.setText(timeStr);
+        });
     }
 
     private void setupTabs() {
@@ -110,31 +117,21 @@ public class VideoListFragment extends Fragment {
     private void setupRecyclerView() {
         int spanCount = getResources().getInteger(R.integer.grid_span_count);
         binding.recyclerView.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(requireContext(), spanCount));
-        
-        // Use a flag to avoid infinite loops during initial tab setup
         final boolean[] isInitializing = {true};
 
         viewModel.getVideos().observe(getViewLifecycleOwner(), videos -> {
             allVideos = (videos != null) ? videos : new ArrayList<>();
             updateCategories();
-            
             boolean currentlyScanning = Boolean.TRUE.equals(viewModel.getIsScanning().getValue());
             
             if (allVideos.isEmpty()) {
                 binding.recyclerView.setVisibility(View.GONE);
-                if (!currentlyScanning) {
-                    binding.emptyView.setVisibility(View.VISIBLE);
-                } else {
-                    binding.emptyView.setVisibility(View.GONE);
-                }
+                binding.emptyView.setVisibility(currentlyScanning ? View.GONE : View.VISIBLE);
             } else {
                 binding.emptyView.setVisibility(View.GONE);
                 binding.recyclerView.setVisibility(View.VISIBLE);
-                
                 if (isInitializing[0]) {
-                    if (binding.tabLayout.getTabCount() > 0) {
-                        filterVideos(currentCategory);
-                    }
+                    if (binding.tabLayout.getTabCount() > 0) filterVideos(currentCategory);
                     isInitializing[0] = false;
                 }
             }
@@ -142,11 +139,8 @@ public class VideoListFragment extends Fragment {
 
         viewModel.getIsScanning().observe(getViewLifecycleOwner(), isScanning -> {
             binding.progressBar.setVisibility(isScanning ? View.VISIBLE : View.GONE);
-            if (!isScanning && allVideos.isEmpty()) {
-                binding.emptyView.setVisibility(View.VISIBLE);
-            } else if (isScanning) {
-                binding.emptyView.setVisibility(View.GONE);
-            }
+            if (!isScanning && allVideos.isEmpty()) binding.emptyView.setVisibility(View.VISIBLE);
+            else if (isScanning) binding.emptyView.setVisibility(View.GONE);
         });
     }
 
@@ -154,34 +148,22 @@ public class VideoListFragment extends Fragment {
         Set<String> folderSet = new LinkedHashSet<>();
         folderSet.add("All");
         
-        // Add Recent if enabled and there are videos with play count > 0
         if (SettingsManager.isShowRecentEnabled(requireContext())) {
             boolean hasPlayed = allVideos.stream().anyMatch(v -> v.getPlayCount() > 0);
-            if (hasPlayed) {
-                folderSet.add("Recent");
-            }
+            if (hasPlayed) folderSet.add("Recent");
         }
         
         if (allVideos != null && !allVideos.isEmpty()) {
-            for (Video v : allVideos) {
-                folderSet.add(v.getFolderName());
-            }
+            for (Video v : allVideos) folderSet.add(v.getFolderName());
         }
         
         List<String> newCategories = new ArrayList<>(folderSet);
-        // Requirement: Limit to All + 5 folders (Total 6)
-        if (newCategories.size() > 6) {
-            newCategories = newCategories.subList(0, 6);
-        }
+        if (newCategories.size() > 7) newCategories = newCategories.subList(0, 7);
 
-        // RE-FIX: Force rebuild if the tab layout is empty (e.g. after view recreation)
         if (!newCategories.equals(categories) || binding.tabLayout.getTabCount() == 0) {
             categories = newCategories;
             binding.tabLayout.removeAllTabs();
-            // If empty, only "All" will be in the set
-            for (String category : categories) {
-                binding.tabLayout.addTab(binding.tabLayout.newTab().setText(category));
-            }
+            for (String category : categories) binding.tabLayout.addTab(binding.tabLayout.newTab().setText(category));
         }
     }
 
@@ -204,19 +186,11 @@ public class VideoListFragment extends Fragment {
             Bundle args = new Bundle();
             args.putString("videoUri", video.getUri().toString());
             args.putInt("videoPosition", position);
-            // We'll pass the whole filtered list IDs to play in sequence
-            ArrayList<String> playlist = filtered.stream()
-                    .map(v -> v.getUri().toString())
-                    .collect(Collectors.toCollection(ArrayList::new));
+            ArrayList<String> playlist = filtered.stream().map(v -> v.getUri().toString()).collect(Collectors.toCollection(ArrayList::new));
             args.putStringArrayList("playlist", playlist);
-            
             Navigation.findNavController(requireView()).navigate(R.id.action_VideoListFragment_to_VideoPlayerFragment, args);
         });
-        
-        if (category.equals("Recent")) {
-            adapter.setShowVpc(true);
-        }
-
+        if (category.equals("Recent")) adapter.setShowVpc(true);
         binding.recyclerView.setAdapter(adapter);
         
         binding.emptyView.setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);
@@ -224,13 +198,8 @@ public class VideoListFragment extends Fragment {
     }
 
     private void checkPermissionAndLoad() {
-        String permission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU 
-                ? Manifest.permission.READ_MEDIA_VIDEO 
-                : Manifest.permission.READ_EXTERNAL_STORAGE;
-
-        if (ContextCompat.checkSelfPermission(requireContext(), permission) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissionLauncher.launch(permission);
-        }
+        String permission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ? Manifest.permission.READ_MEDIA_VIDEO : Manifest.permission.READ_EXTERNAL_STORAGE;
+        if (ContextCompat.checkSelfPermission(requireContext(), permission) != PackageManager.PERMISSION_GRANTED) requestPermissionLauncher.launch(permission);
     }
 
     @Override

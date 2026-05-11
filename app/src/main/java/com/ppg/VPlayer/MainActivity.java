@@ -36,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
     private VideoViewModel videoViewModel;
     private android.content.BroadcastReceiver screenOffReceiver;
     private boolean isLimitDialogShowing = false;
+    private int currentPlaybackSecs = 0;
 
     private final ActivityResultLauncher<Intent> folderPickerLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -54,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        android.util.Log.d("PPG_NAV", "onCreate started");
         try {
             EdgeToEdge.enable(this);
         } catch (Exception ignored) {}
@@ -64,7 +66,6 @@ public class MainActivity extends AppCompatActivity {
         hideSystemUI();
 
         videoViewModel = new ViewModelProvider(this).get(VideoViewModel.class);
-        // Removed auto-loadVideos from here as per new requirement
 
         androidx.navigation.fragment.NavHostFragment navHostFragment = (androidx.navigation.fragment.NavHostFragment) 
                 getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment_content_main);
@@ -80,22 +81,17 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        videoViewModel.getTotalPlaybackSeconds().observe(this, totalSecs -> {
-            if (isLimitDialogShowing) return;
-            
-            int limit = SettingsManager.getASTLimit(this);
-            if (totalSecs / 60 >= limit) {
-                // Requirement 4: Limit reached
+        videoViewModel.getIsScreenTimeOver().observe(this, over -> {
+            if (over && !isLimitDialogShowing) {
                 isLimitDialogShowing = true;
-                Log.d("PPG_AST", "AST limit reached: " + limit + " mins");
-                videoViewModel.setScreenTimeOver(true);
+                Log.d("PPG_AST", "AST limit reached signal received");
                 SettingsManager.saveLastLimitTimestamp(this, System.currentTimeMillis());
-                
-                // Navigate back to Screen-1 if we are in Screen-3
-                // The fragment observer handles this but we'll double check
-
                 showASTOverOverlay();
             }
+        });
+
+        videoViewModel.getTotalPlaybackSeconds().observe(this, totalSecs -> {
+            currentPlaybackSecs = totalSecs;
         });
 
         setupScreenOffReceiver();
@@ -126,22 +122,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void hideSystemUI() {
-        // Ensure navigation bar background is dark so icons show as white
         getWindow().setNavigationBarColor(android.graphics.Color.BLACK);
-
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
             WindowInsetsController controller = getWindow().getInsetsController();
             if (controller != null) {
                 controller.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
                 controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
-                
-                // Clear the light appearance flag to force icons to be white
                 controller.setSystemBarsAppearance(0, 
                         WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | 
                         WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
             }
         } else {
-            // Legacy fallback
             getWindow().getDecorView().setSystemUiVisibility(
                     View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                     | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
@@ -157,7 +148,7 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         hideSystemUI();
         if (checkCoolOffPeriod()) {
-            // Cool off period active, app will remain blocked by overlay/dialog and then exit
+            // Blocked
         }
     }
 
@@ -166,15 +157,10 @@ public class MainActivity extends AppCompatActivity {
         super.onPause();
         android.os.PowerManager pm = (android.os.PowerManager) getSystemService(android.content.Context.POWER_SERVICE);
         if (pm != null && !pm.isInteractive()) {
-            Log.d("PPG_NAV", "Screen is off in onPause, clearing cache and finishing");
             SettingsManager.clearCache(this);
             finishAndRemoveTask();
             System.exit(0);
         }
-    }
-
-    private void checkASTLimit() {
-        // Now handled by observer in onCreate
     }
 
     private boolean checkCoolOffPeriod() {
@@ -186,61 +172,54 @@ public class MainActivity extends AppCompatActivity {
         long coolOffPeriodMs = (long) coolOffPeriodMins * 60 * 1000;
 
         if (diffMs < coolOffPeriodMs) {
-            // Requirement 4e: Still under cool off period
             int remainingMins = (int) ((coolOffPeriodMs - diffMs) / 60000) + 1;
             showStillInCoolOffPeriodDialog(remainingMins);
             return true;
         } else {
-            // Requirement 4f: After cool off period ends
-            SettingsManager.saveLastLimitTimestamp(this, 0); // set LSTOMsg = null
+            SettingsManager.saveLastLimitTimestamp(this, 0);
             return false;
         }
     }
 
     private void showASTOverOverlay() {
-        Log.d("PPG_AST", "showASTOverOverlay called");
         try {
-            // Requirement 4c: Display popup overlay
             android.view.View overlay = getLayoutInflater().inflate(R.layout.dialog_overlay, null);
-            androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
-                    .setView(overlay)
-                    .setCancelable(false)
-                    .create();
+            android.app.Dialog dialog = new android.app.Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+            dialog.setContentView(overlay);
+            dialog.setCancelable(false);
 
             int limit = SettingsManager.getASTLimit(this);
             TextView msg1 = overlay.findViewById(R.id.txtMessage1);
-            if (msg1 != null) {
-                msg1.setText(limit + " mins Screen time is over");
-            }
+            if (msg1 != null) msg1.setText(limit + " mins Screen time is over");
 
             overlay.findViewById(R.id.btnOverlayOk).setOnClickListener(v -> {
-                // Requirement 4d: Exit app
-                dialog.dismiss();
+                isLimitDialogShowing = false;
+                SettingsManager.clearCache(this);
                 finishAndRemoveTask();
                 System.exit(0);
             });
-
-            if (!isFinishing()) {
-                dialog.show();
-            }
-        } catch (Exception e) {
-            Log.e("PPG_AST", "Error showing AST overlay", e);
-            // Fallback exit
-            finishAndRemoveTask();
-            System.exit(0);
-        }
+            if (!isFinishing()) dialog.show();
+        } catch (Exception ignored) {}
     }
 
     private void showStillInCoolOffPeriodDialog(int remainingMins) {
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Cool Off Period")
-                .setMessage("Still under Cool Off Period.... \nPlease wait " + remainingMins + " more minutes.")
-                .setCancelable(false)
-                .setPositiveButton("OK", (d, w) -> {
-                    finishAndRemoveTask();
-                    System.exit(0);
-                })
-                .show();
+        try {
+            android.view.View overlay = getLayoutInflater().inflate(R.layout.dialog_overlay, null);
+            android.app.Dialog dialog = new android.app.Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+            dialog.setContentView(overlay);
+            dialog.setCancelable(false);
+
+            TextView msg1 = overlay.findViewById(R.id.txtMessage1);
+            TextView msg2 = overlay.findViewById(R.id.txtMessage2);
+            if (msg1 != null) msg1.setText("Still under Cool Off Period....");
+            if (msg2 != null) msg2.setText("Please wait " + remainingMins + " more minutes.");
+
+            overlay.findViewById(R.id.btnOverlayOk).setOnClickListener(v -> {
+                finishAndRemoveTask();
+                System.exit(0);
+            });
+            if (!isFinishing()) dialog.show();
+        } catch (Exception ignored) {}
     }
 
     @Override
@@ -252,7 +231,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
-
         if (id == R.id.action_settings) {
             showSettingsDialog();
             return true;
@@ -260,7 +238,6 @@ public class MainActivity extends AppCompatActivity {
             showAboutDialog();
             return true;
         }
-
         return super.onOptionsItemSelected(item);
     }
 
@@ -273,7 +250,6 @@ public class MainActivity extends AppCompatActivity {
         TextView txtFolder = dialogView.findViewById(R.id.txtCurrentFolder);
         TextView txtCount = dialogView.findViewById(R.id.txtVideoCount);
         ProgressBar progressBar = dialogView.findViewById(R.id.dialogProgressBar);
-        
         android.view.View btnCloseX = dialogView.findViewById(R.id.btnCloseX);
         android.widget.Button btnSelect = dialogView.findViewById(R.id.btnSelectFolder);
         android.widget.Button btnRescan = dialogView.findViewById(R.id.btnRescan);
@@ -284,37 +260,27 @@ public class MainActivity extends AppCompatActivity {
         android.widget.EditText editCoolOffPeriod = dialogView.findViewById(R.id.editCoolOffPeriod);
         android.widget.EditText editRandom = dialogView.findViewById(R.id.editRandomThreshold);
 
-        // Load current values
         switchRecent.setChecked(SettingsManager.isShowRecentEnabled(this));
         editAST.setText(String.valueOf(SettingsManager.getASTLimit(this)));
         editCoolOffPeriod.setText(String.valueOf(SettingsManager.getCoolOffPeriod(this)));
         editRandom.setText(String.valueOf(SettingsManager.getRandomThreshold(this)));
 
-        // Observe changes while dialog is open
         videoViewModel.getCurrentFolderPath().observe(this, folderPath -> {
             String displayPath = "None";
             if (folderPath != null) {
                 try {
                     String decoded = Uri.decode(folderPath);
-                    String pathPart = decoded;
-                    if (decoded.contains(":")) {
-                        pathPart = decoded.substring(decoded.lastIndexOf(":") + 1);
-                    }
+                    String pathPart = decoded.contains(":") ? decoded.substring(decoded.lastIndexOf(":") + 1) : decoded;
                     String[] segments = pathPart.split("/");
-                    if (segments.length >= 2) {
-                        displayPath = segments[segments.length - 2] + "/" + segments[segments.length - 1];
-                    } else {
-                        displayPath = pathPart;
-                    }
-                } catch (Exception e) {
-                    displayPath = folderPath;
-                }
+                    if (segments.length >= 2) displayPath = segments[segments.length - 2] + "/" + segments[segments.length - 1];
+                    else displayPath = pathPart;
+                } catch (Exception e) { displayPath = folderPath; }
             }
             txtFolder.setText(Html.fromHtml("<b>Current Folder: </b>" + displayPath, Html.FROM_HTML_MODE_LEGACY));
         });
 
         videoViewModel.getIsScanning().observe(this, isScanning -> {
-            progressBar.setVisibility(isScanning ? android.view.View.VISIBLE : android.view.View.GONE);
+            progressBar.setVisibility(isScanning ? View.VISIBLE : View.GONE);
             btnSelect.setEnabled(!isScanning);
             btnRescan.setEnabled(!isScanning);
             btnSave.setEnabled(!isScanning);
@@ -326,7 +292,6 @@ public class MainActivity extends AppCompatActivity {
         });
 
         btnCloseX.setOnClickListener(v -> dialog.dismiss());
-
         btnSave.setOnClickListener(v -> {
             try {
                 SettingsManager.saveShowRecent(this, switchRecent.isChecked());
@@ -334,33 +299,23 @@ public class MainActivity extends AppCompatActivity {
                 SettingsManager.saveCoolOffPeriod(this, Integer.parseInt(editCoolOffPeriod.getText().toString()));
                 SettingsManager.saveRandomThreshold(this, Integer.parseInt(editRandom.getText().toString()));
                 Toast.makeText(this, "Settings Saved", Toast.LENGTH_SHORT).show();
-            } catch (Exception e) {
-                Toast.makeText(this, "Invalid input", Toast.LENGTH_SHORT).show();
-            }
+            } catch (Exception ignored) {}
             dialog.dismiss();
         });
 
-        btnSelect.setOnClickListener(v -> {
-            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-            folderPickerLauncher.launch(intent);
-        });
-
+        btnSelect.setOnClickListener(v -> folderPickerLauncher.launch(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)));
         btnRescan.setOnClickListener(v -> {
             String currentPath = SettingsManager.getFolderPath(this);
-            if (currentPath != null) {
-                videoViewModel.loadVideos(currentPath);
-            } else {
-                Toast.makeText(this, "Select a folder first", Toast.LENGTH_SHORT).show();
-            }
+            if (currentPath != null) videoViewModel.loadVideos(currentPath);
+            else Toast.makeText(this, "Select a folder first", Toast.LENGTH_SHORT).show();
         });
-
         dialog.show();
     }
 
     private void showAboutDialog() {
         new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("About PPG-YouTubeKids")
-                .setMessage("A kid-friendly offline video player.\nVersion 2.0\n\n" +
+                .setTitle("About v2.0")
+                .setMessage("A kid-friendly offline video player.\n\n" +
                         "Note: Each time the app is installed or new videos are added, " +
                         "you must manually 'Rescan' in Settings to update your list.")
                 .setPositiveButton("OK", null)
@@ -373,8 +328,7 @@ public class MainActivity extends AppCompatActivity {
                 getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment_content_main);
         if (navHostFragment != null) {
             NavController navController = navHostFragment.getNavController();
-            return NavigationUI.navigateUp(navController, appBarConfiguration)
-                    || super.onSupportNavigateUp();
+            return NavigationUI.navigateUp(navController, appBarConfiguration) || super.onSupportNavigateUp();
         }
         return super.onSupportNavigateUp();
     }

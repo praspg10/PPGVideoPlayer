@@ -38,6 +38,7 @@ public class VideoPlayerFragment extends Fragment {
     // Gesture logic
     private int tapCount = 0;
     private String lastTapZone = "";
+    private long lastAccrualTime = 0;
     private final Handler tapHandler = new Handler(Looper.getMainLooper());
     private final Runnable tapTimeoutRunnable = this::processTaps;
 
@@ -83,10 +84,9 @@ public class VideoPlayerFragment extends Fragment {
         player = new ExoPlayer.Builder(requireContext()).build();
         binding.playerView.setPlayer(player);
         
-        // Ensure the player view itself doesn't consume clicks meant for our zones
+        // Ensure playerView doesn't capture clicks that should go to our zones
         binding.playerView.setClickable(false);
-        
-        // Removed old single-tap listener from playerView
+
         binding.controlsContainer.setOnClickListener(v -> hideControls());
         
         binding.seekBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
@@ -113,7 +113,7 @@ public class VideoPlayerFragment extends Fragment {
                 } else {
                     cancelHideTimer();
                     stopProgressUpdate();
-                    if (!isSwitchingVideo && !isSeeking) showControls();
+                    if (!isSwitchingVideo) showControls();
                 }
             }
 
@@ -135,23 +135,13 @@ public class VideoPlayerFragment extends Fragment {
         @Override
         public void run() {
             if (player != null && player.isPlaying() && binding != null) {
-                // Proactive check for AST limit
-                int limit = SettingsManager.getASTLimit(requireContext());
-                Integer totalSecs = viewModel.getTotalPlaybackSeconds().getValue();
-                if (totalSecs != null && totalSecs / 60 >= limit) {
-                    Log.d("PPG_AST", "Proactive stop in progressUpdateRunnable");
-                    player.pause();
-                    viewModel.setScreenTimeOver(true);
-                    return;
-                }
-
                 long current = player.getCurrentPosition();
                 binding.seekBar.setProgress((int) current);
                 binding.txtCurrentTime.setText(formatTime(current));
                 
                 // Track cumulative playback time (Requirement 4)
                 viewModel.incrementPlaybackSeconds();
-
+                
                 hideHandler.postDelayed(this, 1000);
             }
         }
@@ -173,59 +163,41 @@ public class VideoPlayerFragment extends Fragment {
     }
 
     private void onZoneTapped(String zone) {
-        Log.d("PPG_GESTURE", "onZoneTapped: " + zone + " (Controls visible: " + (binding.controlsContainer.getVisibility() == View.VISIBLE) + ")");
-        // If controls are visible, we should probably ignore these zones or hide controls
         if (binding.controlsContainer.getVisibility() == View.VISIBLE) {
             hideControls();
             return;
         }
-
         if (!zone.equals(lastTapZone)) {
             tapHandler.removeCallbacks(tapTimeoutRunnable);
-            processTaps(); // Process previous zone if any
+            processTaps();
             tapCount = 0;
         }
         lastTapZone = zone;
         tapCount++;
-        Log.d("PPG_GESTURE", "tapCount: " + tapCount + " for zone: " + lastTapZone);
         tapHandler.removeCallbacks(tapTimeoutRunnable);
-        tapHandler.postDelayed(tapTimeoutRunnable, 400); // 400ms window for kid-friendly multi-tap
+        tapHandler.postDelayed(tapTimeoutRunnable, 400);
     }
 
     private void processTaps() {
         if (tapCount == 0) return;
-        
         int count = tapCount;
         String zone = lastTapZone;
-        Log.d("PPG_GESTURE", "processTaps: zone=" + zone + ", count=" + count);
         tapCount = 0;
         lastTapZone = "";
 
         if (zone.equals("MIDDLE")) {
-            if (count == 1) {
-                Log.d("PPG_GESTURE", "MIDDLE single tap: showing controls");
-                // Requirement 1a: Show Pause button and shrink to 75%. 
-                // We show controls (which includes the button) and keep video playing.
-                showControls();
-            }
+            if (count == 1) showControls();
         } else if (zone.equals("LEFT")) {
-            if (count >= 2) {
-                int seekSecs = (count == 2) ? 10 : (count == 3) ? 20 : 30;
-                Log.d("PPG_GESTURE", "LEFT multi-tap (" + count + "): seeking -" + seekSecs);
-                seekRelative(-seekSecs);
-            }
+            if (count >= 2) seekRelative(-(count == 2 ? 10 : count == 3 ? 20 : 30));
         } else if (zone.equals("RIGHT")) {
-            if (count >= 2) {
-                int seekSecs = (count == 2) ? 10 : (count == 3) ? 20 : 30;
-                Log.d("PPG_GESTURE", "RIGHT multi-tap (" + count + "): seeking +" + seekSecs);
-                seekRelative(seekSecs);
-            }
+            if (count >= 2) seekRelative(count == 2 ? 10 : count == 3 ? 20 : 30);
         }
     }
 
     private void seekRelative(int seconds) {
         if (player != null) {
             isSeeking = true;
+            
             long newPos = player.getCurrentPosition() + (seconds * 1000L);
             if (newPos < 0) newPos = 0;
             if (newPos > player.getDuration()) newPos = player.getDuration();
@@ -239,19 +211,18 @@ public class VideoPlayerFragment extends Fragment {
                 binding.txtSeekFeedback.setAlpha(1.0f);
                 binding.txtSeekFeedback.animate()
                         .alpha(0.0f)
-                        .setDuration(1000)
-                        .setStartDelay(500)
+                        .setDuration(1200)
+                        .setStartDelay(1000)
                         .withEndAction(() -> {
-                            if (binding != null) binding.txtSeekFeedback.setVisibility(View.GONE);
+                            if (binding != null && !isSeeking) binding.txtSeekFeedback.setVisibility(View.GONE);
                         })
                         .start();
             }
-
-            // After seeking, ensure it keeps playing if it was playing or just start it
             player.play();
             
             // Clear the flag after a short delay to allow onIsPlayingChanged to settle
-            tapHandler.postDelayed(() -> isSeeking = false, 500);
+            tapHandler.removeCallbacksAndMessages(null);
+            tapHandler.postDelayed(() -> isSeeking = false, 1500);
         }
     }
 
@@ -331,7 +302,7 @@ public class VideoPlayerFragment extends Fragment {
         player.setMediaItem(mediaItem);
         player.prepare();
         
-        // Logical check for playback position (Requirements 5b, 5c, 5d)
+        // Smart Playback Position Logic
         int threshold = SettingsManager.getRandomThreshold(requireContext());
         Video currentVideo = null;
         List<Video> allVideos = viewModel.getVideos().getValue();
@@ -347,19 +318,11 @@ public class VideoPlayerFragment extends Fragment {
         if (currentVideo != null) {
             int playCount = currentVideo.getPlayCount();
             long duration = currentVideo.getDuration();
-            
-            // 5b: VPC < threshold -> Start from 0:00
-            if (playCount < threshold) {
-                player.seekTo(0);
-            } 
-            // 5c: VPC >= threshold AND duration < 5 mins -> Start from 0:00
-            else if (duration < 300000) {
-                player.seekTo(0);
-            }
-            // 5d: VPC >= threshold AND duration >= 5 mins -> Start from random position
-            else {
-                long randomPos = (long) (Math.random() * (duration * 0.8)); // first 80%
+            if (playCount >= threshold && duration >= 300000) {
+                long randomPos = (long) (Math.random() * (duration * 0.8));
                 player.seekTo(randomPos);
+            } else {
+                player.seekTo(0);
             }
         }
 
@@ -367,9 +330,8 @@ public class VideoPlayerFragment extends Fragment {
         isSwitchingVideo = false;
 
         String name = null;
-        List<Video> videos = viewModel.getVideos().getValue();
-        if (videos != null) {
-            for (Video v : videos) {
+        if (allVideos != null) {
+            for (Video v : allVideos) {
                 if (v.getUri().equals(uri)) {
                     name = v.getName();
                     break;

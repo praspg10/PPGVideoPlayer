@@ -13,7 +13,7 @@ public class VideoViewModel extends AndroidViewModel {
     private final MutableLiveData<List<Video>> videos = new MutableLiveData<>();
     private final MutableLiveData<Boolean> isScanning = new MutableLiveData<>(false);
     private final MutableLiveData<String> currentFolderPath = new MutableLiveData<>();
-    private final MutableLiveData<Integer> totalPlaybackSeconds = new MutableLiveData<>(0);
+    private final MutableLiveData<Long> totalPlaybackMillis = new MutableLiveData<>(0L);
     private final MutableLiveData<Boolean> isScreenTimeOver = new MutableLiveData<>(false);
     private List<Video> sessionVideos = new ArrayList<>();
 
@@ -35,18 +35,34 @@ public class VideoViewModel extends AndroidViewModel {
         return currentFolderPath;
     }
 
+    public LiveData<Long> getTotalPlaybackMillis() {
+        return totalPlaybackMillis;
+    }
+
     public LiveData<Integer> getTotalPlaybackSeconds() {
-        return totalPlaybackSeconds;
+        return androidx.lifecycle.Transformations.map(totalPlaybackMillis, millis -> (int)(millis / 1000));
+    }
+
+    public void addPlaybackMillis(long delta) {
+        Long current = totalPlaybackMillis.getValue();
+        if (current == null) current = 0L;
+        long next = current + delta;
+        
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+            totalPlaybackMillis.setValue(next);
+        } else {
+            totalPlaybackMillis.postValue(next);
+        }
+
+        // Proactive check for limit inside ViewModel
+        int limitMins = SettingsManager.getASTLimit(getApplication());
+        if (next >= (long)limitMins * 60 * 1000) {
+            setScreenTimeOver(true);
+        }
     }
 
     public void incrementPlaybackSeconds() {
-        Integer current = totalPlaybackSeconds.getValue();
-        if (current == null) current = 0;
-        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
-            totalPlaybackSeconds.setValue(current + 1);
-        } else {
-            totalPlaybackSeconds.postValue(current + 1);
-        }
+        addPlaybackMillis(1000L);
     }
 
     public LiveData<Boolean> getIsScreenTimeOver() {
@@ -54,7 +70,11 @@ public class VideoViewModel extends AndroidViewModel {
     }
 
     public void setScreenTimeOver(boolean over) {
-        isScreenTimeOver.postValue(over);
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+            isScreenTimeOver.setValue(over);
+        } else {
+            isScreenTimeOver.postValue(over);
+        }
     }
 
     public void updateFolderPath(String path) {
