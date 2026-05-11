@@ -27,7 +27,7 @@ PPGVideoPlayer is a kid-friendly video player designed for offline use on Androi
     - Rows:
         1. Recently Played Videos (Enable/Disable toggle).
         2. Active Screen Time (AST) limit in minutes.
-        3. AST CoolTime in minutes.
+        3. AST CoolOffPeriod in minutes.
         4. Smart Random Playback threshold (PlayCount).
     - Bottom Info: "Current Folder" (showing 1-level parent and folder name) and "Scanned Files Count" are positioned just above buttons.
     - Buttons: "VIDEO SOURCE" (select folder), "RESCAN" (manual update), and "SAVE" (persist settings).
@@ -48,7 +48,7 @@ PPGVideoPlayer is a kid-friendly video player designed for offline use on Androi
     - If VPC >= threshold and duration < 5 mins: Start from 0:00.
     - If VPC >= threshold and duration >= 5 mins: Start from a random position.
 - **Active Screen Time (AST)**: App monitors active playback duration. When the limit (default 30m) is reached, it displays an overlay and closes.
-- **Cool Off Time**: After reaching the AST limit, a cool-off period (default 15m) is enforced before the app allows further use.
+- **Cool Off Period**: After reaching the AST limit, a cool-off period (default 15m) is enforced before the app allows further use.
 - **Gesture Zones (Full Screen)**: The screen is divided into three horizontal zones:
     - **Left (30%)**: Double-tap to rewind -10s, triple-tap for -20s, quadruple-tap for -30s. Video remains full-screen.
     - **Middle (40%)**: Single-tap to show PAUSE button, shrink video to 75%, and display film strip (Screen-3).

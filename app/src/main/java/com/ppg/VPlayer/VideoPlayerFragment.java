@@ -135,6 +135,16 @@ public class VideoPlayerFragment extends Fragment {
         @Override
         public void run() {
             if (player != null && player.isPlaying() && binding != null) {
+                // Proactive check for AST limit
+                int limit = SettingsManager.getASTLimit(requireContext());
+                Integer totalSecs = viewModel.getTotalPlaybackSeconds().getValue();
+                if (totalSecs != null && totalSecs / 60 >= limit) {
+                    Log.d("PPG_AST", "Proactive stop in progressUpdateRunnable");
+                    player.pause();
+                    viewModel.setScreenTimeOver(true);
+                    return;
+                }
+
                 long current = player.getCurrentPosition();
                 binding.seekBar.setProgress((int) current);
                 binding.txtCurrentTime.setText(formatTime(current));

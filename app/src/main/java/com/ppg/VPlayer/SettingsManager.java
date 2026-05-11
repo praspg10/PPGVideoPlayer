@@ -14,7 +14,7 @@ public class SettingsManager {
     private static final String KEY_VIDEO_LIST = "video_list";
     private static final String KEY_SHOW_RECENT = "show_recent";
     private static final String KEY_AST_LIMIT = "ast_limit";
-    private static final String KEY_COOL_TIME = "cool_time";
+    private static final String KEY_COOL_OFF_PERIOD = "cool_off_period";
     private static final String KEY_RANDOM_THRESHOLD = "random_threshold";
     private static final String KEY_LAST_LIMIT_TIMESTAMP = "last_limit_reached";
 
@@ -48,14 +48,14 @@ public class SettingsManager {
         return prefs.getInt(KEY_AST_LIMIT, 30);
     }
 
-    public static void saveCoolTime(Context context, int mins) {
+    public static void saveCoolOffPeriod(Context context, int mins) {
         SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-        prefs.edit().putInt(KEY_COOL_TIME, mins).apply();
+        prefs.edit().putInt(KEY_COOL_OFF_PERIOD, mins).apply();
     }
 
-    public static int getCoolTime(Context context) {
+    public static int getCoolOffPeriod(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-        return prefs.getInt(KEY_COOL_TIME, 15);
+        return prefs.getInt(KEY_COOL_OFF_PERIOD, 15);
     }
 
     public static void saveRandomThreshold(Context context, int count) {

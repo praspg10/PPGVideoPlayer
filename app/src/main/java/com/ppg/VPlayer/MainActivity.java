@@ -35,6 +35,7 @@ public class MainActivity extends AppCompatActivity {
     private ActivityMainBinding binding;
     private VideoViewModel videoViewModel;
     private android.content.BroadcastReceiver screenOffReceiver;
+    private boolean isLimitDialogShowing = false;
 
     private final ActivityResultLauncher<Intent> folderPickerLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -80,12 +81,19 @@ public class MainActivity extends AppCompatActivity {
         });
 
         videoViewModel.getTotalPlaybackSeconds().observe(this, totalSecs -> {
+            if (isLimitDialogShowing) return;
+            
             int limit = SettingsManager.getASTLimit(this);
             if (totalSecs / 60 >= limit) {
                 // Requirement 4: Limit reached
+                isLimitDialogShowing = true;
                 Log.d("PPG_AST", "AST limit reached: " + limit + " mins");
                 videoViewModel.setScreenTimeOver(true);
                 SettingsManager.saveLastLimitTimestamp(this, System.currentTimeMillis());
+                
+                // Navigate back to Screen-1 if we are in Screen-3
+                // The fragment observer handles this but we'll double check
+
                 showASTOverOverlay();
             }
         });
@@ -148,8 +156,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         hideSystemUI();
-        if (checkCoolTime()) {
-            // Cool time active, app will remain blocked by overlay/dialog and then exit
+        if (checkCoolOffPeriod()) {
+            // Cool off period active, app will remain blocked by overlay/dialog and then exit
         }
     }
 
@@ -169,52 +177,64 @@ public class MainActivity extends AppCompatActivity {
         // Now handled by observer in onCreate
     }
 
-    private boolean checkCoolTime() {
+    private boolean checkCoolOffPeriod() {
         long lastReached = SettingsManager.getLastLimitTimestamp(this);
         if (lastReached == 0) return false;
 
-        int coolTimeMins = SettingsManager.getCoolTime(this);
+        int coolOffPeriodMins = SettingsManager.getCoolOffPeriod(this);
         long diffMs = System.currentTimeMillis() - lastReached;
-        long coolTimeMs = (long) coolTimeMins * 60 * 1000;
+        long coolOffPeriodMs = (long) coolOffPeriodMins * 60 * 1000;
 
-        if (diffMs < coolTimeMs) {
-            // Requirement 4e: Still under cool time
-            int remainingMins = (int) ((coolTimeMs - diffMs) / 60000) + 1;
-            showStillInCoolTimeDialog(remainingMins);
+        if (diffMs < coolOffPeriodMs) {
+            // Requirement 4e: Still under cool off period
+            int remainingMins = (int) ((coolOffPeriodMs - diffMs) / 60000) + 1;
+            showStillInCoolOffPeriodDialog(remainingMins);
             return true;
         } else {
-            // Requirement 4f: After cool time ends
+            // Requirement 4f: After cool off period ends
             SettingsManager.saveLastLimitTimestamp(this, 0); // set LSTOMsg = null
             return false;
         }
     }
 
     private void showASTOverOverlay() {
-        // Requirement 4c: Display popup overlay
-        android.view.View overlay = getLayoutInflater().inflate(R.layout.dialog_overlay, null);
-        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
-                .setView(overlay)
-                .setCancelable(false)
-                .create();
+        Log.d("PPG_AST", "showASTOverOverlay called");
+        try {
+            // Requirement 4c: Display popup overlay
+            android.view.View overlay = getLayoutInflater().inflate(R.layout.dialog_overlay, null);
+            androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+                    .setView(overlay)
+                    .setCancelable(false)
+                    .create();
 
-        int limit = SettingsManager.getASTLimit(this);
-        TextView msg1 = overlay.findViewById(R.id.txtMessage1);
-        msg1.setText(limit + " mins Screen time is over");
+            int limit = SettingsManager.getASTLimit(this);
+            TextView msg1 = overlay.findViewById(R.id.txtMessage1);
+            if (msg1 != null) {
+                msg1.setText(limit + " mins Screen time is over");
+            }
 
-        overlay.findViewById(R.id.btnOverlayOk).setOnClickListener(v -> {
-            // Requirement 4d: Exit app
-            dialog.dismiss();
+            overlay.findViewById(R.id.btnOverlayOk).setOnClickListener(v -> {
+                // Requirement 4d: Exit app
+                dialog.dismiss();
+                finishAndRemoveTask();
+                System.exit(0);
+            });
+
+            if (!isFinishing()) {
+                dialog.show();
+            }
+        } catch (Exception e) {
+            Log.e("PPG_AST", "Error showing AST overlay", e);
+            // Fallback exit
             finishAndRemoveTask();
             System.exit(0);
-        });
-
-        dialog.show();
+        }
     }
 
-    private void showStillInCoolTimeDialog(int remainingMins) {
+    private void showStillInCoolOffPeriodDialog(int remainingMins) {
         new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Cool Off Time")
-                .setMessage("Still under Cool Time.... \nPlease wait " + remainingMins + " more minutes.")
+                .setTitle("Cool Off Period")
+                .setMessage("Still under Cool Off Period.... \nPlease wait " + remainingMins + " more minutes.")
                 .setCancelable(false)
                 .setPositiveButton("OK", (d, w) -> {
                     finishAndRemoveTask();
@@ -261,13 +281,13 @@ public class MainActivity extends AppCompatActivity {
         
         androidx.appcompat.widget.SwitchCompat switchRecent = dialogView.findViewById(R.id.switchShowRecent);
         android.widget.EditText editAST = dialogView.findViewById(R.id.editAST);
-        android.widget.EditText editCoolTime = dialogView.findViewById(R.id.editCoolTime);
+        android.widget.EditText editCoolOffPeriod = dialogView.findViewById(R.id.editCoolOffPeriod);
         android.widget.EditText editRandom = dialogView.findViewById(R.id.editRandomThreshold);
 
         // Load current values
         switchRecent.setChecked(SettingsManager.isShowRecentEnabled(this));
         editAST.setText(String.valueOf(SettingsManager.getASTLimit(this)));
-        editCoolTime.setText(String.valueOf(SettingsManager.getCoolTime(this)));
+        editCoolOffPeriod.setText(String.valueOf(SettingsManager.getCoolOffPeriod(this)));
         editRandom.setText(String.valueOf(SettingsManager.getRandomThreshold(this)));
 
         // Observe changes while dialog is open
@@ -311,7 +331,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 SettingsManager.saveShowRecent(this, switchRecent.isChecked());
                 SettingsManager.saveASTLimit(this, Integer.parseInt(editAST.getText().toString()));
-                SettingsManager.saveCoolTime(this, Integer.parseInt(editCoolTime.getText().toString()));
+                SettingsManager.saveCoolOffPeriod(this, Integer.parseInt(editCoolOffPeriod.getText().toString()));
                 SettingsManager.saveRandomThreshold(this, Integer.parseInt(editRandom.getText().toString()));
                 Toast.makeText(this, "Settings Saved", Toast.LENGTH_SHORT).show();
             } catch (Exception e) {

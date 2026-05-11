@@ -18,7 +18,7 @@ This document describes the functional behavior and technical architecture of PP
 - **System Navigation Styling**: Forces navigation bar to black background with white icons (clears `APPEARANCE_LIGHT_NAVIGATION_BARS`) for visibility on Fire OS.
 - Handles `onBackPressed` to prevent accidental app exit on Fire OS.
 - **AST Monitoring**: Implements a background timer to track active playback duration. Triggers a lockout and saves `last_limit_timestamp` when minutes exceed the threshold.
-- **Cool Off Enforcement**: Checks `last_limit_timestamp` on startup/resume and prevents access if the difference is less than the configured `cool_time`.
+- **Cool Off Enforcement**: Checks `last_limit_timestamp` on startup/resume and prevents access if the difference is less than the configured `cool_off_period`.
 - Hosts an enhanced Settings dialog with row-based configurations and a dedicated "SAVE" button.
 - **Screen Off Handling**: Detects `ACTION_SCREEN_OFF`, clears temporary application cache, and closes the app immediately.
 
@@ -51,7 +51,7 @@ This document describes the functional behavior and technical architecture of PP
 
 ### 3.5 SettingsManager
 - Handles JSON serialization of the video list for offline persistence.
-- **Persistent States**: Manages storage for `avpt_limit`, `cool_time`, `random_threshold`, and `show_recent` toggle.
+- **Persistent States**: Manages storage for `avpt_limit`, `cool_off_period`, `random_threshold`, and `show_recent` toggle.
 - **VPC Persistence**: Saves updated `playCount` for every video after each playback session.
 - **Folder Path Truncation**: Provides logic to extract and display only the immediate parent and the selected folder name for UI display.
 - **Cache Management**: Provides `clearCache()` to recursively delete temporary files in the app's cache directory while preserving the persistent SVL.
