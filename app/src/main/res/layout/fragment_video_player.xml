@@ -13,7 +13,7 @@
         android:keepScreenOn="true"
         android:transformPivotY="0dp" />
 
-    <!-- Transparent touch zones for gestures -->
+    <!-- Transparent touch zones for gestures (25% - 50% - 25%) -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/touchOverlay"
         android:layout_width="match_parent"
@@ -24,7 +24,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:background="@android:color/transparent"
-            app:layout_constraintWidth_percent="0.3"
+            app:layout_constraintWidth_percent="0.25"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@id/touchMiddle" />
 
@@ -33,7 +33,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:background="@android:color/transparent"
-            app:layout_constraintWidth_percent="0.4"
+            app:layout_constraintWidth_percent="0.5"
             app:layout_constraintStart_toEndOf="@id/touchLeft"
             app:layout_constraintEnd_toStartOf="@id/touchRight" />
 
@@ -42,7 +42,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:background="@android:color/transparent"
-            app:layout_constraintWidth_percent="0.3"
+            app:layout_constraintWidth_percent="0.25"
             app:layout_constraintStart_toEndOf="@id/touchMiddle"
             app:layout_constraintEnd_toEndOf="parent" />
 
@@ -175,16 +175,16 @@
         android:id="@+id/txtSeekFeedback"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="150dp"
-        android:background="#D0000000"
-        android:elevation="100dp"
+        android:layout_marginBottom="160dp"
+        android:background="#CC000000"
         android:paddingStart="40dp"
         android:paddingEnd="40dp"
         android:paddingTop="20dp"
         android:paddingBottom="20dp"
         android:textColor="@android:color/white"
-        android:textSize="32sp"
+        android:textSize="36sp"
         android:textStyle="bold"
+        android:elevation="10dp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

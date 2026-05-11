@@ -41,6 +41,7 @@ public class VideoPlayerFragment extends Fragment {
     private long lastAccrualTime = 0;
     private final Handler tapHandler = new Handler(Looper.getMainLooper());
     private final Runnable tapTimeoutRunnable = this::processTaps;
+    private final Runnable resetSeekingRunnable = () -> isSeeking = false;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -119,7 +120,11 @@ public class VideoPlayerFragment extends Fragment {
                     }
                     cancelHideTimer();
                     stopProgressUpdate();
-                    if (!isSwitchingVideo) showControls();
+                    if (!isSwitchingVideo && !isSeeking) {
+                        showControls();
+                    } else {
+                        Log.d("PPG_GESTURE", "Blocking showControls in onIsPlayingChanged: isSwitching=" + isSwitchingVideo + ", isSeeking=" + isSeeking);
+                    }
                 }
             }
 
@@ -175,17 +180,27 @@ public class VideoPlayerFragment extends Fragment {
     }
 
     private void onZoneTapped(String zone) {
+        Log.d("PPG_GESTURE", "onZoneTapped: " + zone);
         if (binding.controlsContainer.getVisibility() == View.VISIBLE) {
             hideControls();
             return;
         }
-        if (!zone.equals(lastTapZone)) {
+
+        // If we switch zones, process the previous one immediately
+        if (!zone.equals(lastTapZone) && !lastTapZone.isEmpty()) {
             tapHandler.removeCallbacks(tapTimeoutRunnable);
             processTaps();
-            tapCount = 0;
         }
+
         lastTapZone = zone;
         tapCount++;
+        
+        // Proactively set isSeeking if we are in a side zone to block accidental shrinks
+        if (zone.equals("LEFT") || zone.equals("RIGHT")) {
+            isSeeking = true;
+            tapHandler.removeCallbacks(resetSeekingRunnable);
+        }
+
         tapHandler.removeCallbacks(tapTimeoutRunnable);
         tapHandler.postDelayed(tapTimeoutRunnable, 400);
     }
@@ -194,15 +209,29 @@ public class VideoPlayerFragment extends Fragment {
         if (tapCount == 0) return;
         int count = tapCount;
         String zone = lastTapZone;
+        Log.d("PPG_GESTURE", "processTaps: " + zone + " x" + count);
         tapCount = 0;
         lastTapZone = "";
 
         if (zone.equals("MIDDLE")) {
-            if (count == 1) showControls();
+            if (count == 1 && !isSeeking) {
+                Log.d("PPG_GESTURE", "MIDDLE single tap: showing controls");
+                showControls();
+            }
         } else if (zone.equals("LEFT")) {
-            if (count >= 2) seekRelative(-(count == 2 ? 10 : count == 3 ? 20 : 30));
+            if (count >= 2) {
+                seekRelative(-(count == 2 ? 10 : count == 3 ? 20 : 30));
+            } else {
+                // Single tap on side - just clear seeking lock
+                tapHandler.postDelayed(resetSeekingRunnable, 500);
+            }
         } else if (zone.equals("RIGHT")) {
-            if (count >= 2) seekRelative(count == 2 ? 10 : count == 3 ? 20 : 30);
+            if (count >= 2) {
+                seekRelative(count == 2 ? 10 : count == 3 ? 20 : 30);
+            } else {
+                // Single tap on side - just clear seeking lock
+                tapHandler.postDelayed(resetSeekingRunnable, 500);
+            }
         }
     }
 
@@ -218,23 +247,31 @@ public class VideoPlayerFragment extends Fragment {
             // Feedback message
             String msg = (seconds > 0 ? "+" : "") + seconds + " sec";
             if (binding != null) {
+                binding.txtSeekFeedback.animate().cancel();
                 binding.txtSeekFeedback.setText(msg);
                 binding.txtSeekFeedback.setVisibility(View.VISIBLE);
                 binding.txtSeekFeedback.setAlpha(1.0f);
+                binding.txtSeekFeedback.setScaleX(1.0f);
+                binding.txtSeekFeedback.setScaleY(1.0f);
+                
                 binding.txtSeekFeedback.animate()
                         .alpha(0.0f)
-                        .setDuration(1200)
+                        .scaleX(1.2f)
+                        .scaleY(1.2f)
+                        .setDuration(800)
                         .setStartDelay(1000)
                         .withEndAction(() -> {
-                            if (binding != null && !isSeeking) binding.txtSeekFeedback.setVisibility(View.GONE);
+                            if (binding != null) {
+                                binding.txtSeekFeedback.setVisibility(View.GONE);
+                            }
                         })
                         .start();
             }
             player.play();
             
             // Clear the flag after a short delay to allow onIsPlayingChanged to settle
-            tapHandler.removeCallbacksAndMessages(null);
-            tapHandler.postDelayed(() -> isSeeking = false, 1500);
+            tapHandler.removeCallbacks(resetSeekingRunnable);
+            tapHandler.postDelayed(resetSeekingRunnable, 2000);
         }
     }
 

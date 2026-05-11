@@ -193,9 +193,13 @@ public class MainActivity extends AppCompatActivity {
 
             int limit = SettingsManager.getASTLimit(this);
             TextView msg1 = overlay.findViewById(R.id.txtMessage1);
+            TextView msg2 = overlay.findViewById(R.id.txtMessage2);
             if (msg1 != null) {
-                String msg = limit + " mins Screen time is over";
+                String msg = "Screen Time " + limit + " mins reached";
                 msg1.setText(msg);
+            }
+            if (msg2 != null) {
+                msg2.setText("Please play with other toys");
             }
 
             overlay.findViewById(R.id.btnOverlayOk).setOnClickListener(v -> {

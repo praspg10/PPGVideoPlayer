@@ -145,25 +145,38 @@ public class VideoListFragment extends Fragment {
     }
 
     private void updateCategories() {
-        Set<String> folderSet = new LinkedHashSet<>();
-        folderSet.add("All");
+        Set<String> folderNames = new LinkedHashSet<>();
+        if (allVideos != null && !allVideos.isEmpty()) {
+            for (Video v : allVideos) {
+                folderNames.add(v.getFolderName());
+            }
+        }
         
+        List<String> uniqueFolders = new ArrayList<>(folderNames);
+        // Requirement: Limit to only 5 unique folders
+        if (uniqueFolders.size() > 5) {
+            uniqueFolders = uniqueFolders.subList(0, 5);
+        }
+
+        List<String> newCategories = new ArrayList<>();
+        newCategories.add("All");
+        
+        // Add Recent if enabled and there are videos with play count > 0
         if (SettingsManager.isShowRecentEnabled(requireContext())) {
             boolean hasPlayed = allVideos.stream().anyMatch(v -> v.getPlayCount() > 0);
-            if (hasPlayed) folderSet.add("Recent");
+            if (hasPlayed) {
+                newCategories.add("Recent");
+            }
         }
         
-        if (allVideos != null && !allVideos.isEmpty()) {
-            for (Video v : allVideos) folderSet.add(v.getFolderName());
-        }
-        
-        List<String> newCategories = new ArrayList<>(folderSet);
-        if (newCategories.size() > 7) newCategories = newCategories.subList(0, 7);
+        newCategories.addAll(uniqueFolders);
 
         if (!newCategories.equals(categories) || binding.tabLayout.getTabCount() == 0) {
             categories = newCategories;
             binding.tabLayout.removeAllTabs();
-            for (String category : categories) binding.tabLayout.addTab(binding.tabLayout.newTab().setText(category));
+            for (String category : categories) {
+                binding.tabLayout.addTab(binding.tabLayout.newTab().setText(category));
+            }
         }
     }
 
