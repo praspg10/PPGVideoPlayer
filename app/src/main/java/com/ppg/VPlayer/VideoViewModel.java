@@ -5,6 +5,7 @@ import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+import android.util.Log;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -48,6 +49,10 @@ public class VideoViewModel extends AndroidViewModel {
         if (current == null) current = 0L;
         long next = current + delta;
         
+        if (next / 1000 > current / 1000) {
+            Log.d("PPG_AST_ACC", "AST Accrued: " + (next/1000) + "s (added " + delta + "ms)");
+        }
+
         if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
             totalPlaybackMillis.setValue(next);
         } else {

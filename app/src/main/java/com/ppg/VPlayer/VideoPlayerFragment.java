@@ -108,9 +108,15 @@ public class VideoPlayerFragment extends Fragment {
                 if (binding == null) return;
                 binding.btnPlayPause.setImageResource(isPlaying ? R.drawable.ic_pause_white_outlined : R.drawable.ic_play_white_outlined);
                 if (isPlaying) {
+                    lastAccrualTime = System.currentTimeMillis();
                     startHideTimer();
                     startProgressUpdate();
                 } else {
+                    if (lastAccrualTime > 0) {
+                        long delta = System.currentTimeMillis() - lastAccrualTime;
+                        viewModel.addPlaybackMillis(delta);
+                        lastAccrualTime = 0;
+                    }
                     cancelHideTimer();
                     stopProgressUpdate();
                     if (!isSwitchingVideo) showControls();
@@ -135,14 +141,20 @@ public class VideoPlayerFragment extends Fragment {
         @Override
         public void run() {
             if (player != null && player.isPlaying() && binding != null) {
+                long now = System.currentTimeMillis();
+                if (lastAccrualTime > 0) {
+                    long delta = now - lastAccrualTime;
+                    viewModel.addPlaybackMillis(delta);
+                }
+                lastAccrualTime = now;
+
                 long current = player.getCurrentPosition();
                 binding.seekBar.setProgress((int) current);
                 binding.txtCurrentTime.setText(formatTime(current));
                 
-                // Track cumulative playback time (Requirement 4)
-                viewModel.incrementPlaybackSeconds();
-                
                 hideHandler.postDelayed(this, 1000);
+            } else {
+                lastAccrualTime = 0;
             }
         }
     };

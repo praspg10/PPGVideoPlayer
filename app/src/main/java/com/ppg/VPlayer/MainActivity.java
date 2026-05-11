@@ -146,17 +146,20 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        android.util.Log.d("PPG_NAV", "onResume called");
         hideSystemUI();
         if (checkCoolOffPeriod()) {
-            // Blocked
+            android.util.Log.d("PPG_NAV", "Access blocked: cool off period active");
         }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        android.util.Log.d("PPG_NAV", "onPause called");
         android.os.PowerManager pm = (android.os.PowerManager) getSystemService(android.content.Context.POWER_SERVICE);
         if (pm != null && !pm.isInteractive()) {
+            android.util.Log.d("PPG_NAV", "Non-interactive pause (screen off?), clearing cache and exiting");
             SettingsManager.clearCache(this);
             finishAndRemoveTask();
             System.exit(0);
@@ -190,7 +193,10 @@ public class MainActivity extends AppCompatActivity {
 
             int limit = SettingsManager.getASTLimit(this);
             TextView msg1 = overlay.findViewById(R.id.txtMessage1);
-            if (msg1 != null) msg1.setText(limit + " mins Screen time is over");
+            if (msg1 != null) {
+                String msg = limit + " mins Screen time is over";
+                msg1.setText(msg);
+            }
 
             overlay.findViewById(R.id.btnOverlayOk).setOnClickListener(v -> {
                 isLimitDialogShowing = false;
@@ -242,30 +248,33 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showSettingsDialog() {
-        android.view.View dialogView = getLayoutInflater().inflate(R.layout.dialog_settings, null);
-        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(this)
+        android.util.Log.d("PPG_NAV", "showSettingsDialog called");
+        final android.view.View dialogView = getLayoutInflater().inflate(R.layout.dialog_settings, null);
+        final androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setView(dialogView)
                 .create();
 
-        TextView txtFolder = dialogView.findViewById(R.id.txtCurrentFolder);
-        TextView txtCount = dialogView.findViewById(R.id.txtVideoCount);
-        ProgressBar progressBar = dialogView.findViewById(R.id.dialogProgressBar);
-        android.view.View btnCloseX = dialogView.findViewById(R.id.btnCloseX);
-        android.widget.Button btnSelect = dialogView.findViewById(R.id.btnSelectFolder);
-        android.widget.Button btnRescan = dialogView.findViewById(R.id.btnRescan);
-        android.widget.Button btnSave = dialogView.findViewById(R.id.btnSave);
-        
-        androidx.appcompat.widget.SwitchCompat switchRecent = dialogView.findViewById(R.id.switchShowRecent);
-        android.widget.EditText editAST = dialogView.findViewById(R.id.editAST);
-        android.widget.EditText editCoolOffPeriod = dialogView.findViewById(R.id.editCoolOffPeriod);
-        android.widget.EditText editRandom = dialogView.findViewById(R.id.editRandomThreshold);
+        final TextView txtFolder = dialogView.findViewById(R.id.txtCurrentFolder);
+        final TextView txtCount = dialogView.findViewById(R.id.txtVideoCount);
+        final ProgressBar progressBar = dialogView.findViewById(R.id.dialogProgressBar);
+        final android.view.View btnCloseX = dialogView.findViewById(R.id.btnCloseX);
+        final android.widget.Button btnSelect = dialogView.findViewById(R.id.btnSelectFolder);
+        final android.widget.Button btnRescan = dialogView.findViewById(R.id.btnRescan);
+        final android.widget.Button btnSave = dialogView.findViewById(R.id.btnSave);
+        final androidx.appcompat.widget.SwitchCompat switchRecent = dialogView.findViewById(R.id.switchShowRecent);
+        final android.widget.EditText editAST = dialogView.findViewById(R.id.editAST);
+        final android.widget.EditText editCoolOffPeriod = dialogView.findViewById(R.id.editCoolOffPeriod);
+        final android.widget.EditText editRandom = dialogView.findViewById(R.id.editRandomThreshold);
 
+        // Load current values
         switchRecent.setChecked(SettingsManager.isShowRecentEnabled(this));
         editAST.setText(String.valueOf(SettingsManager.getASTLimit(this)));
         editCoolOffPeriod.setText(String.valueOf(SettingsManager.getCoolOffPeriod(this)));
         editRandom.setText(String.valueOf(SettingsManager.getRandomThreshold(this)));
 
-        videoViewModel.getCurrentFolderPath().observe(this, folderPath -> {
+        // Scope observers to activity but only update if view is attached
+        final androidx.lifecycle.Observer<String> folderObserver = folderPath -> {
+            if (txtFolder == null) return;
             String displayPath = "None";
             if (folderPath != null) {
                 try {
@@ -277,18 +286,30 @@ public class MainActivity extends AppCompatActivity {
                 } catch (Exception e) { displayPath = folderPath; }
             }
             txtFolder.setText(Html.fromHtml("<b>Current Folder: </b>" + displayPath, Html.FROM_HTML_MODE_LEGACY));
-        });
+        };
 
-        videoViewModel.getIsScanning().observe(this, isScanning -> {
-            progressBar.setVisibility(isScanning ? View.VISIBLE : View.GONE);
-            btnSelect.setEnabled(!isScanning);
-            btnRescan.setEnabled(!isScanning);
-            btnSave.setEnabled(!isScanning);
-        });
+        final androidx.lifecycle.Observer<Boolean> scanningObserver = isScanning -> {
+            if (progressBar != null) progressBar.setVisibility(isScanning ? View.VISIBLE : View.GONE);
+            if (btnSelect != null) btnSelect.setEnabled(!isScanning);
+            if (btnRescan != null) btnRescan.setEnabled(!isScanning);
+            if (btnSave != null) btnSave.setEnabled(!isScanning);
+        };
 
-        videoViewModel.getVideos().observe(this, videos -> {
-            int count = (videos != null ? videos.size() : 0);
-            txtCount.setText(Html.fromHtml("<b>Scanned Files Count: </b>" + count, Html.FROM_HTML_MODE_LEGACY));
+        final androidx.lifecycle.Observer<java.util.List<Video>> videosObserver = videos -> {
+            if (txtCount != null) {
+                int count = (videos != null ? videos.size() : 0);
+                txtCount.setText(Html.fromHtml("<b>Scanned Files Count: </b>" + count, Html.FROM_HTML_MODE_LEGACY));
+            }
+        };
+
+        videoViewModel.getCurrentFolderPath().observe(this, folderObserver);
+        videoViewModel.getIsScanning().observe(this, scanningObserver);
+        videoViewModel.getVideos().observe(this, videosObserver);
+
+        dialog.setOnDismissListener(d -> {
+            videoViewModel.getCurrentFolderPath().removeObserver(folderObserver);
+            videoViewModel.getIsScanning().removeObserver(scanningObserver);
+            videoViewModel.getVideos().removeObserver(videosObserver);
         });
 
         btnCloseX.setOnClickListener(v -> dialog.dismiss());
