@@ -1,48 +1,51 @@
-# Functional Specification - PPGVideoPlayer v2.0
+# Functional Specification - PPGVideoPlayer v3.0
 
 ## 1. Introduction
-This document describes the functional behavior and technical architecture of PPGVideoPlayer, optimized for Amazon Fire HD tablets.
+This document describes the technical architecture and enhanced features of PPGVideoPlayer v3.0, optimized for Amazon Fire HD tablets.
 
-## 2. Application Flow
-1. **Startup**: Opens to `VideoListFragment`. Checks for saved SVL.
-2. **Initial State**: If no folder is configured, displays "No videos" message and only the "All" tab link.
-3. **Manual Setup**: User selects a folder and clicks "Rescan" in the custom Settings dialog.
-4. **Browsing**: Videos are presented in a persistent random order. Navigation between folders updates the filter; returning to "All" triggers a reshuffle.
-5. **Playback**: Navigates to `VideoPlayerFragment` (Screen-2/3).
-6. **Immersive Playback**: App enters global Sticky Immersive Mode. Status and Navigation bars are hidden but accessible via swipe.
-7. **Back Navigation**: Explicit `popBackStack` to ensure return to the maintained list state without app closure.
+## 2. Technical Architecture
+### 2.1 Precision AST Tracking
+The Active Screen Time (AST) system uses millisecond deltas to prevent timer drift.
+- **Trigger**: Accrual begins only when `onIsPlayingChanged(true)` is received.
+- **Calculation**: Real-time delta = `System.currentTimeMillis() - lastAccrualTimestamp`.
+- **Sync**: A final accrual occurs on `pause()` or `stop()` to ensure zero-loss tracking.
+
+### 2.2 Gesture Detection Model
+Screen-2 (Player) is split into three transparent logical zones using a ConstraintLayout overlay:
+- **Seek Relative**: `Left 25%` and `Right 25%` zones.
+- **Control Toggle**: `Middle 50%` zone.
+- **Debouncing**: Multi-tap logic waits 400ms for sequence completion. A proactive `isSeeking` flag blocks `showControls()` during side-taps to maintain 100% full-screen scale.
+
+### 2.3 Layout Management
+- **Screen-1 Header**: Uses vertical guidelines at 18%, 28%, and 90% to maintain a proportional grid across different screen sizes.
+- **Dynamic Tabs**: `VideoListFragment` rebuilds tabs based on a unique folder set, limited to the first 5 discovered folders.
 
 ## 3. Component Details
 ### 3.1 MainActivity
-- Manages global system UI visibility (Immersive Mode).
-- **System Navigation Styling**: Forces navigation bar to black background with white icons (clears `APPEARANCE_LIGHT_NAVIGATION_BARS`) for visibility on Fire OS.
-- Handles `onBackPressed` to prevent accidental app exit on Fire OS.
-- Hosts a custom Settings dialog layout with "Select Folder to Scan" and "Rescan Now" links.
-- Uses `launchMode="singleTop"` for navigation stability.
-- **Screen Off Handling**: Uses a `BroadcastReceiver` to detect `ACTION_SCREEN_OFF`, clears temporary application cache, and closes the app immediately to prevent background playback.
+- **Lockout Enforcement**: Observes `isScreenTimeOver` LiveData. Displays non-dismissible `dialog_overlay.xml`.
+- **Cool Off Logic**: Checks `lastLimitTimestamp` in `onResume`. Compares `System.currentTimeMillis() - lastLimit >= coolOffMs`.
+- **Memory Safety**: Implements explicit `removeObserver()` logic for the Settings dialog to prevent observer leaks and frequent restarts.
 
-### 3.2 VideoListFragment
-- Displays link-style folder tabs (underlined, red when selected).
-- Limits view to 1 "All" link and up to 5 folder links.
-- Maintains video grid state and scroll position during player transitions.
-- **Header Actions**: Features a Settings icon (replacing 3-dots) and a Close (X) button that clears the application cache and finishes the activity.
+### 3.2 VideoViewModel
+- **VPC Management**: Manages `playCount` per video object. Play counts are persistent but reset upon a manual folder "RESCAN".
+- **Transformations**: Exposes `totalPlaybackSeconds` as a mapped LiveData from millisecond raw data for clean UI updates.
 
-### 3.3 VideoPlayerFragment
-- Implements safety checks (binding null-checks) for background tasks.
-- Uses `setKeepScreenOn(true)` at the view level for Fire OS compatibility.
-- Disables forced orientation changes to prevent activity recreation crashes.
-- Custom SeekBar with layer-list drawable (6dp thick).
+### 3.3 SettingsManager
+- **Persistence**: Added SharedPreferences keys for `ast_limit`, `cool_off_period`, `random_threshold`, and `show_recent`.
+- **Default Values**: AST (30m), Cool Off (15m), Random Threshold (5 repeats).
 
-### 3.4 VideoViewModel
-- Stores `sessionVideos` to ensure stable randomization during a single session.
-- Provides `reshuffleAll()` logic triggered by tab navigation.
-- Persists and reloads the `ScannedVideoList` (SVL) via `SettingsManager`.
+### 3.4 VideoPlayerFragment
+- **Smart Position Logic**: If `playCount >= threshold` AND `duration >= 5m`, calls `player.seekTo(randomPosition)` on start.
+- **Visual Feedback**: `txtSeekFeedback` (36sp bold) is elevated to top Z-order to ensure visibility over the ExoPlayer surface.
 
-### 3.5 SettingsManager
-- Handles JSON serialization of the video list for offline persistence.
-- **Cache Management**: Provides `clearCache()` to recursively delete temporary files in the app's cache directory while preserving the persistent SVL.
-
-## 4. UI Design
-- **Theme**: Material3 with `configChanges` in Manifest to handle orientation without restart.
-- **Controls**: Back button icon (64dp target) and 24sp text labels.
-- **Color Palette**: `ytk_primary_red` (#FF0000) for primary actions and indicators.
+## 4. UI Design Standards
+- **Font Scale**: 
+    - Header Branding: 26sp bold.
+    - AST Counter: 16sp bold.
+    - Lockout Msg1: 44sp bold.
+    - Lockout Msg2: 54sp bold.
+- **Color Palette**: `ytk_primary_red` (#FF0000) for indicators and play count badges.
+- **Dimensions**:
+    - Settings Width: 792dp (approx. 80% screen width).
+    - Lockout Overlay: 85% screen width.
+    - VPC Badge: 32dp diameter.
