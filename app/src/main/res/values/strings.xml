@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">PPG-YouTubeKids</string>
+    <string name="app_name">PPGVideoPlayer</string>
     <string name="app_title_kids">Kids</string>
     <string name="action_settings">Settings</string>
     <!-- Strings used for fragments for navigation -->

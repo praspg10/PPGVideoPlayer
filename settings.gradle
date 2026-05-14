@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "PPG-YouTubeKids"
+rootProject.name = "PPGVideoPlayer"
 include ':app'
