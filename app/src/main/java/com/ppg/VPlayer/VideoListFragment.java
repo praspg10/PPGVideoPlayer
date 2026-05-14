@@ -52,6 +52,20 @@ public class VideoListFragment extends Fragment {
         
         binding.btnMenu.setOnClickListener(v -> {
             androidx.appcompat.widget.PopupMenu popup = new androidx.appcompat.widget.PopupMenu(requireContext(), v);
+            
+            // Force icons to show in PopupMenu
+            try {
+                java.lang.reflect.Field field = popup.getClass().getDeclaredField("mPopup");
+                field.setAccessible(true);
+                Object menuPopupHelper = field.get(popup);
+                if (menuPopupHelper != null) {
+                    java.lang.reflect.Method setForceIcons = menuPopupHelper.getClass().getDeclaredMethod("setForceShowIcon", boolean.class);
+                    setForceIcons.invoke(menuPopupHelper, true);
+                }
+            } catch (Exception e) {
+                android.util.Log.e("PPG_NAV", "Error forcing menu icons", e);
+            }
+
             popup.getMenuInflater().inflate(R.menu.menu_main, popup.getMenu());
             popup.setOnMenuItemClickListener(item -> {
                 return requireActivity().onOptionsItemSelected(item);

@@ -1,7 +1,7 @@
-# Requirements Document - PPGVideoPlayer v3.1
+# Requirements Document - PPGVideoPlayer v3.2
 
 ## 1. Project Overview
-PPGVideoPlayer is a kid-friendly video player designed for offline use on Android devices and tablets (specifically Fire HD). Version 3.1 introduces folder exclusion rules during scanning, alongside the v3.0 features of robust parental controls, multi-tap gestures, and play count badges.
+PPGVideoPlayer is a kid-friendly video player designed for offline use on Android devices and tablets (specifically Fire HD). Version 3.2 introduces configurable folder exclusion rules and a refined navigation menu.
 
 ## 2. Target Audience
 - Children (primary users)
@@ -10,7 +10,7 @@ PPGVideoPlayer is a kid-friendly video player designed for offline use on Androi
 ## 3. Functional Requirements
 ### 3.1 Video Discovery & Management (SVL)
 - **Manual Scanning**: No background auto-scanning. Users must manually select a folder and click "RESCAN" in Settings.
-- **Folder Exclusion**: If a folder name contains the text **"-skipscan"**, that folder and all its subfolders are ignored during the scanning process.
+- **Folder Exclusion**: If a folder name contains the text **"-skipscan"**, that folder and all its subfolders are ignored during the scanning process. This behavior can be toggled in Settings (Disabled by default).
 - **Scanned Video List (SVL)**: Persists across sessions. Manual rescan resets Video Played Counts (VPC).
 - **Tab Limits**: Displays "All", "Recent" (if enabled), and exactly the first 5 unique folders discovered. Maximum 7 tabs total.
 
@@ -27,8 +27,8 @@ PPGVideoPlayer is a kid-friendly video player designed for offline use on Androi
 - **Smart Position**: Videos exceeding the play count threshold (default 5) and duration (5m) start at a random position (between 0% and 80% of length).
 
 ### 3.4 User Interface
-- **Header Layout**: Structured via guidelines: 18% Branding ("PPG Kids"), 10% AST Timer, 62% Tabs, 10% Actions (Settings/Close).
-- **Settings Dialog**: 792dp wide layout with row-based configuration for AST, Cool Off, Recent Tab toggle, and Random Threshold. Buttons renamed to: VIDEO SOURCE, RESCAN, SAVE.
+- **Header Layout**: Structured via guidelines: 18% Branding ("PPG Kids"), 10% AST Timer, 62% Tabs, 10% Actions (Menu/Close).
+- **Settings Dialog**: 792dp wide layout with row-based configuration for AST, Cool Off, Recent Tab toggle, SkipScan toggle, and Random Threshold. Buttons renamed to: VIDEO SOURCE, RESCAN, SAVE.
 - **Screen-2/3 Gestures**:
     - **Left 25%**: Multi-tap (2/3/4+) to rewind 10/20/30 seconds.
     - **Right 25%**: Multi-tap (2/3/4+) to fast-forward 10/20/30 seconds.

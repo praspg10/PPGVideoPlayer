@@ -1,7 +1,7 @@
-# Functional Specification - PPGVideoPlayer v3.1
+# Functional Specification - PPGVideoPlayer v3.2
 
 ## 1. Introduction
-This document describes the technical architecture and enhanced features of PPGVideoPlayer v3.1, optimized for Amazon Fire HD tablets.
+This document describes the technical architecture and enhanced features of PPGVideoPlayer v3.2, optimized for Amazon Fire HD tablets.
 
 ## 2. Technical Architecture
 ### 2.1 Precision AST Tracking
@@ -21,9 +21,14 @@ Screen-2 (Player) is split into three transparent logical zones using a Constrai
 - **Dynamic Tabs**: `VideoListFragment` rebuilds tabs based on a unique folder set, limited to the first 5 discovered folders.
 
 ### 2.4 Folder Exclusion Logic
-The scanning process in `VideoLibrary.java` implements a recursive skip rule:
-- **Rule**: If a folder name contains the case-insensitive string `"-skipscan"`, the scanner aborts processing for that directory.
+The scanning process in `VideoLibrary.java` implements a configurable recursive skip rule:
+- **Setting**: Managed via `SettingsManager.isSkipScanEnabled()`.
+- **Rule**: If enabled and a folder name contains the case-insensitive string `"-skipscan"`, the scanner aborts processing for that directory.
 - **Effect**: No videos from that folder or any of its subdirectories are added to the SVL.
+
+### 2.5 Navigation Menu
+- **Header Icon**: Hamburger menu (3 lines) `ic_hamburger_menu.xml`.
+- **Menu Items**: Added `ic_settings_gear.xml` icon to the "Settings" item using reflection to force icon visibility in `PopupMenu`.
 
 ## 3. Component Details
 ### 3.1 MainActivity

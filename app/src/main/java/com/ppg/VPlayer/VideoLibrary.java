@@ -20,11 +20,13 @@ public class VideoLibrary {
             return videoList;
         }
 
+        boolean skipScanEnabled = SettingsManager.isSkipScanEnabled(context);
+
         try {
             Uri treeUri = Uri.parse(folderUriStr);
             DocumentFile root = DocumentFile.fromTreeUri(context, treeUri);
             if (root != null && root.isDirectory()) {
-                scanRecursive(context, root, videoList);
+                scanRecursive(context, root, videoList, skipScanEnabled);
             }
         } catch (Exception e) {
             // Requirement: Do not fall back to scanning all videos.
@@ -35,12 +37,12 @@ public class VideoLibrary {
         return videoList;
     }
 
-    private static void scanRecursive(Context context, DocumentFile parent, List<Video> videoList) {
+    private static void scanRecursive(Context context, DocumentFile parent, List<Video> videoList, boolean skipScanEnabled) {
         String folderName = parent.getName();
         if (folderName == null) folderName = "Unknown";
         
-        // Requirement: Skip folders (and their subfolders) containing "-skipscan"
-        if (folderName.toLowerCase().contains("-skipscan")) {
+        // Requirement: Skip folders (and their subfolders) containing "-skipscan" ONLY IF ENABLED
+        if (skipScanEnabled && folderName.toLowerCase().contains("-skipscan")) {
             android.util.Log.d("PPG_SCAN", "Skipping folder: " + folderName);
             return;
         }
@@ -48,7 +50,7 @@ public class VideoLibrary {
         DocumentFile[] files = parent.listFiles();
         for (DocumentFile file : files) {
             if (file.isDirectory()) {
-                scanRecursive(context, file, videoList);
+                scanRecursive(context, file, videoList, skipScanEnabled);
             } else {
                 String name = file.getName();
                 if (name != null) {

@@ -4,12 +4,13 @@
     tools:context="com.ppg.VPlayer.MainActivity">
     <item
         android:id="@+id/action_settings"
+        android:icon="@drawable/ic_settings_gear"
         android:orderInCategory="100"
         android:title="Settings"
         app:showAsAction="never" />
     <item
         android:id="@+id/action_about"
         android:orderInCategory="102"
-        android:title="About v3.1"
+        android:title="About v3.2"
         app:showAsAction="never" />
 </menu>

@@ -271,12 +271,14 @@ public class MainActivity extends AppCompatActivity {
         final android.widget.Button btnRescan = dialogView.findViewById(R.id.btnRescan);
         final android.widget.Button btnSave = dialogView.findViewById(R.id.btnSave);
         final androidx.appcompat.widget.SwitchCompat switchRecent = dialogView.findViewById(R.id.switchShowRecent);
+        final androidx.appcompat.widget.SwitchCompat switchSkipScan = dialogView.findViewById(R.id.switchSkipScan);
         final android.widget.EditText editAST = dialogView.findViewById(R.id.editAST);
         final android.widget.EditText editCoolOffPeriod = dialogView.findViewById(R.id.editCoolOffPeriod);
         final android.widget.EditText editRandom = dialogView.findViewById(R.id.editRandomThreshold);
 
         // Load current values
         switchRecent.setChecked(SettingsManager.isShowRecentEnabled(this));
+        switchSkipScan.setChecked(SettingsManager.isSkipScanEnabled(this));
         editAST.setText(String.valueOf(SettingsManager.getASTLimit(this)));
         editCoolOffPeriod.setText(String.valueOf(SettingsManager.getCoolOffPeriod(this)));
         editRandom.setText(String.valueOf(SettingsManager.getRandomThreshold(this)));
@@ -325,6 +327,7 @@ public class MainActivity extends AppCompatActivity {
         btnSave.setOnClickListener(v -> {
             try {
                 SettingsManager.saveShowRecent(this, switchRecent.isChecked());
+                SettingsManager.saveSkipScan(this, switchSkipScan.isChecked());
                 SettingsManager.saveASTLimit(this, Integer.parseInt(editAST.getText().toString()));
                 SettingsManager.saveCoolOffPeriod(this, Integer.parseInt(editCoolOffPeriod.getText().toString()));
                 SettingsManager.saveRandomThreshold(this, Integer.parseInt(editRandom.getText().toString()));
@@ -344,9 +347,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void showAboutDialog() {
         new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("About v3.1")
+                .setTitle("About v3.2")
                 .setMessage("A kid-friendly offline video player.\n\n" +
-                        "New in v3.1: Folder exclusion (-skipscan).\n" +
+                        "New in v3.2: Configurable folder exclusion and UI refinements.\n" +
                         "Includes v3.0: AST, Gesture Zones, and Recent tab.\n\n" +
                         "Note: Each time the app is installed or new videos are added, " +
                         "you must manually 'RESCAN' in Settings to update your list.")

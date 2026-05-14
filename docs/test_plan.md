@@ -1,15 +1,16 @@
-# Test Plan - PPGVideoPlayer v3.1
+# Test Plan - PPGVideoPlayer v3.2
 
 ## 1. Scope
-Testing covers precision parental controls, multi-tap gesture zones, persistent play count tracking, large-scale UI elements, and folder exclusion rules.
+Testing covers precision parental controls, multi-tap gesture zones, persistent play count tracking, large-scale UI elements, folder exclusion rules, and navigation menu icons.
 
 ## 2. Test Cases
 
 ### 3.1 Folder Exclusion
 | ID | Description | Expected Result |
 |---|---|---|
-| TC-18 | Folder Exclusion (-skipscan) | Create a folder named "Private-skipscan" containing videos. Perform RESCAN. Videos from this folder should NOT appear in the list. |
-| TC-19 | Subfolder Exclusion | Create a subfolder with "-skipscan" inside a normal folder. Perform RESCAN. Normal folder videos show, subfolder videos are hidden. |
+| TC-18 | Folder Exclusion Disabled | Toggling "Skip folders containing '-skipscan'" to OFF. Perform RESCAN. Folders with "-skipscan" SHOULD appear in the list. |
+| TC-19 | Folder Exclusion Enabled | Toggling "Skip folders containing '-skipscan'" to ON. Perform RESCAN. Folders with "-skipscan" should be HIDDEN. |
+| TC-20 | Subfolder Exclusion | Create a subfolder with "-skipscan" inside a normal folder. Perform RESCAN with exclusion ON. Normal folder videos show, subfolder videos are hidden. |
 
 ### 3.2 Parental Controls (AST & Cool Off)
 | ID | Description | Expected Result |
@@ -38,9 +39,11 @@ Testing covers precision parental controls, multi-tap gesture zones, persistent 
 ### 3.4 UI Layout & Grid
 | ID | Description | Expected Result |
 |---|---|---|
-| TC-33 | Header Slot Alignment | Branding (18%), Timer (10%), Tabs (62%), and Actions (10%) are correctly spaced. |
-| TC-34 | Folder Tab Limit | Storage with 10 folders only displays the first 5 folders discovered as tabs. |
-| TC-35 | Settings Dimensions | Settings dialog is large (792dp) and fits all 4 config rows without scrolling. |
+| TC-33 | Header Icon Change | Header Settings Gear is now a Hamburger (3-line) icon. |
+| TC-34 | Menu Icons | Tapping Hamburger reveals PopupMenu. "Settings" item now features a Gear Icon before the text. |
+| TC-35 | Header Slot Alignment | Branding (18%), Timer (10%), Tabs (62%), and Actions (10%) are correctly spaced. |
+| TC-36 | Folder Tab Limit | Storage with 10 folders only displays the first 5 folders discovered as tabs. |
+| TC-37 | Settings Dimensions | Settings dialog is large (792dp) and fits all rows without scrolling. |
 
 ### 3.5 System Stability
 | ID | Description | Expected Result |

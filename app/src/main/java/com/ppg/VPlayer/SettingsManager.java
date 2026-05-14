@@ -13,6 +13,7 @@ public class SettingsManager {
     private static final String KEY_FOLDER_URI = "folder_uri";
     private static final String KEY_VIDEO_LIST = "video_list";
     private static final String KEY_SHOW_RECENT = "show_recent";
+    private static final String KEY_SKIP_SCAN = "skip_scan";
     private static final String KEY_AST_LIMIT = "ast_limit";
     private static final String KEY_COOL_OFF_PERIOD = "cool_off_period";
     private static final String KEY_RANDOM_THRESHOLD = "random_threshold";
@@ -36,6 +37,16 @@ public class SettingsManager {
     public static boolean isShowRecentEnabled(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
         return prefs.getBoolean(KEY_SHOW_RECENT, false); // Default disabled
+    }
+
+    public static void saveSkipScan(Context context, boolean skip) {
+        SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        prefs.edit().putBoolean(KEY_SKIP_SCAN, skip).apply();
+    }
+
+    public static boolean isSkipScanEnabled(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        return prefs.getBoolean(KEY_SKIP_SCAN, false); // Default disabled
     }
 
     public static void saveASTLimit(Context context, int mins) {

@@ -132,7 +132,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Settings"
                 android:scaleType="fitCenter"
-                android:src="@drawable/ic_settings_gear" />
+                android:src="@drawable/ic_hamburger_menu" />
 
             <ImageButton
                 android:id="@+id/btnCloseApp"
