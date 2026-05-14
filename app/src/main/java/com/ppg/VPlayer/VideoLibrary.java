@@ -36,10 +36,16 @@ public class VideoLibrary {
     }
 
     private static void scanRecursive(Context context, DocumentFile parent, List<Video> videoList) {
-        DocumentFile[] files = parent.listFiles();
         String folderName = parent.getName();
         if (folderName == null) folderName = "Unknown";
         
+        // Requirement: Skip folders (and their subfolders) containing "-skipscan"
+        if (folderName.toLowerCase().contains("-skipscan")) {
+            android.util.Log.d("PPG_SCAN", "Skipping folder: " + folderName);
+            return;
+        }
+
+        DocumentFile[] files = parent.listFiles();
         for (DocumentFile file : files) {
             if (file.isDirectory()) {
                 scanRecursive(context, file, videoList);

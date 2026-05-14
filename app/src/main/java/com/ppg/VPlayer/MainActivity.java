@@ -344,9 +344,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void showAboutDialog() {
         new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("About v3.0")
+                .setTitle("About v3.1")
                 .setMessage("A kid-friendly offline video player.\n\n" +
-                        "New in v3.0: Active Screen Time (AST), Gesture Zones, and Recent tab.\n\n" +
+                        "New in v3.1: Folder exclusion (-skipscan).\n" +
+                        "Includes v3.0: AST, Gesture Zones, and Recent tab.\n\n" +
                         "Note: Each time the app is installed or new videos are added, " +
                         "you must manually 'RESCAN' in Settings to update your list.")
                 .setPositiveButton("OK", null)

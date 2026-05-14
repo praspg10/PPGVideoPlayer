@@ -1,11 +1,17 @@
-# Test Plan - PPGVideoPlayer v3.0
+# Test Plan - PPGVideoPlayer v3.1
 
 ## 1. Scope
-Testing covers precision parental controls, multi-tap gesture zones, persistent play count tracking, and large-scale UI elements.
+Testing covers precision parental controls, multi-tap gesture zones, persistent play count tracking, large-scale UI elements, and folder exclusion rules.
 
 ## 2. Test Cases
 
-### 3.1 Parental Controls (AST & Cool Off)
+### 3.1 Folder Exclusion
+| ID | Description | Expected Result |
+|---|---|---|
+| TC-18 | Folder Exclusion (-skipscan) | Create a folder named "Private-skipscan" containing videos. Perform RESCAN. Videos from this folder should NOT appear in the list. |
+| TC-19 | Subfolder Exclusion | Create a subfolder with "-skipscan" inside a normal folder. Perform RESCAN. Normal folder videos show, subfolder videos are hidden. |
+
+### 3.2 Parental Controls (AST & Cool Off)
 | ID | Description | Expected Result |
 |---|---|---|
 | TC-21 | AST Counter Accuracy | Header timer syncs with real video time. 1 min playback = 01:00 on counter. |

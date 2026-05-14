@@ -10,6 +10,6 @@
     <item
         android:id="@+id/action_about"
         android:orderInCategory="102"
-        android:title="About v3.0"
+        android:title="About v3.1"
         app:showAsAction="never" />
 </menu>
