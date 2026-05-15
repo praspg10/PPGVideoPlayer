@@ -1,0 +1,102 @@
+# PPGVideoPlayer v3.2 Master Vibe Coding Sequence
+
+Use these prompts in order to rebuild the full PPGVideoPlayer application using an AI-powered IDE.
+
+---
+
+### **Prompt 1: Project Foundation & Immersive Branding**
+"Act as a Senior Android Developer. Create a new Android project named 'PPGVideoPlayer'.
+
+**The Goal:** A kid-friendly, offline video player optimized for Fire HD tablets.
+**The Vibe:** High-contrast, large touch targets, no status/navigation bars (Global Sticky Immersive Mode).
+
+**Implementation Details:**
+1. Set the theme to Material3 Light with no ActionBar. Use `#FF0000` (ytk_primary_red) as the primary color and `#FDEBD0` (butterscotch) for backgrounds.
+2. In MainActivity, implement a Global Sticky Immersive Mode. Force the System Navigation Bar to be black with white icons (`APPEARANCE_LIGHT_NAVIGATION_BARS` cleared) for maximum visibility on Fire OS.
+3. Setup a single-activity architecture using the Jetpack Navigation Component.
+4. Add a `Video` model class with fields: `uriString`, `name`, `duration`, `size`, `folderName`, and `playCount` (default 0).
+5. Create a `VideoViewModel` using `LiveData` to manage a list of videos, a scanning state boolean, and a `totalPlaybackMillis` long."
+
+---
+
+### **Prompt 2: Recursive Scanner & Configurable SkipScan**
+"Implement a `VideoLibrary` utility and a `SettingsManager` for storage and scanning.
+
+**Rules:**
+1. **SAF Scanning:** Use `DocumentFile` (Storage Access Framework) to recursively scan a user-selected folder for `.mp4`, `.mkv`, and `.mp3` files.
+2. **Persistent SVL:** Save the scanned list via GSON/SharedPreferences. On app launch, reload this list instantly without re-scanning the storage.
+3. **Configurable Exclusion:** Implement a '-skipscan' rule. If a folder name contains that text, ignore it and its subfolders.
+4. **Settings Persistence:** In `SettingsManager`, provide keys for `ast_limit` (default 30), `cool_off_period` (default 15), `random_threshold` (default 5), `show_recent` (boolean), and `skip_scan_enabled` (boolean).
+5. **Metadata Safety:** If `MediaMetadataRetriever` returns a duration > 24h or negative, default it to '00:00'."
+
+---
+
+### **Prompt 3: Screen-1 (Header Grid & Tab Logic)**
+"Build the main video list screen (`VideoListFragment`) with a strict percentage-based header.
+
+**Header Layout (18/10/62/10 split):**
+1. Use Vertical Guidelines at 18%, 28%, and 90%.
+2. **Slot 1 (18%)**: Branding. App Icon (52dp) and 'Kids' (26sp bold) / 'PPG' (12sp).
+3. **Slot 2 (10%)**: A centered session timer text `MM:SS` (16sp bold) that updates in real-time during playback.
+4. **Slot 3 (62%)**: A `TabLayout` for folders. Selected tabs use `ytk_primary_red` with an underline.
+5. **Slot 4 (10%)**: A Hamburger Menu icon and an 'X' Close icon (30dp each) with a 24dp gap.
+
+**Tab Logic:**
+- Order: 'All' (First) -> 'Recent' (If enabled/played) -> Up to 5 unique folder names. (Max 7 tabs total).
+- Navigating to 'All' triggers a list reshuffle; other tabs filter the grid."
+
+---
+
+### **Prompt 4: Grid UI, VPC Badges & Recent Tab**
+"Create the video browsing grid and play tracking UI.
+
+**Tasks:**
+1. Create a `VideoAdapter` for a GridView (Span 3/4).
+2. **VPC Badges:** Add a 32dp red circle badge (`vpc_circle.xml`) at the top-right of each thumbnail. Show the `playCount` in 16sp white bold font (only if count > 0).
+3. **Recent Tab:** Implement filtering logic to show only videos where `playCount > 0`, sorted by most-played first.
+4. **Empty State:** If no videos are found, show a centered message: 'No videos found. Please review the Settings'."
+
+---
+
+### **Prompt 5: Screen-2/3 (The 3-Zone Player & Gestures)**
+"Implement the `VideoPlayerFragment` using ExoPlayer with a custom 3-zone gesture overlay.
+
+**Gesture Model:**
+1. **Left 25% Zone:** Double/Triple tap to rewind -10/-20/-30 seconds.
+2. **Right 25% Zone:** Double/Triple tap to fast-forward +10/+20/+30 seconds.
+3. **Middle 50% Zone:** Single tap to show controls and shrink the video to 75% size (Screen-3) with a horizontal film strip at the bottom.
+4. **Gesture Lock:** Use an `isSeeking` flag to keep the video at 100% full-screen during multi-taps. Block the shrink logic for 2 seconds after any side-seek.
+5. **Visual Feedback:** Show a large, centered popup at the bottom (36sp bold) saying '+20 sec' during gestures."
+
+---
+
+### **Prompt 6: Precision AST & Standardized Overlays**
+"Implement the Active Screen Time (AST) lockout system in `MainActivity`.
+
+**Requirements:**
+1. **Millisecond Accuracy:** Track `totalPlaybackMillis` by calculating deltas between `System.currentTimeMillis()` timestamps while `player.isPlaying()` is true.
+2. **Lockout Trigger:** When limit reached, pause the player and show a non-dismissible full-screen `dialog_overlay.xml`.
+3. **Overlay Style:** Msg 1 (44sp bold), Msg 2 (54sp bold). OK button (32sp). Background 90% black.
+4. **AST Message:** 'Screen Time [X] mins reached' / 'Please play with other toys'.
+5. **Cool Off Logic:** In `onResume`, check if the lockout timestamp is still within the `cool_off_period`. If so, show the same overlay style with: 'Still under Cool Off Period' / 'Please wait [X] more minutes'."
+
+---
+
+### **Prompt 7: Settings Refinement & Memory Safety**
+"Build the advanced Settings dialog and ensure app stability.
+
+**Dialog Requirements:**
+1. Set `minWidth` to 792dp. Use a row-based layout for all 5 configurations (Recent, SkipScan, AST, CoolOff, Random).
+2. **Action Buttons:** VIDEO SOURCE (SAF Picker), RESCAN (Rebuild library/reset VPC), SAVE (Commit changes).
+3. **Memory Safety:** When the dialog is shown, add LiveData observers to update the file count. **Crucial:** Implement `removeObserver` logic in `onDismiss` to prevent memory leaks and the 'restart loop' crash.
+4. **Hamburger Menu:** Ensure the popup menu shows the Settings Gear icon next to the 'Settings' text using reflection if necessary."
+
+---
+
+### **Prompt 8: Power & Reliability Polish**
+"Finalize the app behavior for Fire OS reliability.
+
+**Tasks:**
+1. **Smart Start:** If a video has `playCount >= threshold` and is > 5m long, start it at a random position (0-80%).
+2. **Power Button:** Handle `ACTION_SCREEN_OFF` by accruing the final fraction of playback time, clearing the cache, and calling `finishAndRemoveTask()` to prevent background battery drain.
+3. **Navigation Guard:** Ensure the 'Back' button in the player returns to the same list state in Screen-1 without closing the app."

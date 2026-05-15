@@ -1,0 +1,31 @@
+# Original User Instructions for PPGVideoPlayer Development
+
+The following are the actual instructions provided during the development of version 3.2:
+
+1. "Increase 10% Branding size. I don't see any overlapping the timer."
+2. "Please revert the settings gear icon and X icon to older size."
+3. "Please reduce icon size for the settings gear icon and X icon to 30dp."
+4. "Increase size for Branding PPG Kids. App Icon 48dp, Title 'Kids' 26sp bold, Subtitle 'PPG' 12sp."
+5. "AST Counter is missing from the header. Please restore it."
+6. "Increase branding size a little more (to 18%). Move AST Counter to 18-28% slot."
+7. "The settings popup is showing old data and is small. It's missing AST config, Recent tabs config, cool-off period configs, and has old button names. Please fix it to be 792dp wide with row-based settings."
+8. "Implement double/triple tap on left 30% to rewind 10s/-20s and Right 30% to forward +10s/+20s. Ensure it stays in fullscreen mode during taps."
+9. "AST Timer is not calculating properly. Also, the CoolOffPeriod popup must be the same size as the AST error message."
+10. "Double/triple tap on left & right must display how much is forwarded or rewound as a message below the screen."
+11. "The app is getting restarted frequently while in the settings page. Please check it (Memory leak/Observer issue)."
+12. "Add more gaps between the settings gear icon and X icon (24dp)."
+13. "Increase the popup size (to 80-85%) and use bigger fonts for both the AST timeout message and CoolOffPeriod popup."
+14. "The AST Counter is running very slow and is not in sync with actual video duration. I set the threshold to 1 minute, but it shows 45s when the limit is reached. Please fix the accuracy."
+15. "Set left 25% area for multi-taps to rewind -10/-20/-30 and right 25% area to forward +10/+20/+30. The middle 50% area should show the pause/play button and shrink to 75% size (Screen-3)."
+16. "Fix the issue where the screen moves to 75% size during side-taps. It should stay at 100% full screen when seeking."
+17. "Regarding folders: I see more than 5 folders. Retrieve only the first 5 unique folders found, so that the tabs show: ALL, Recent, and 5 folders."
+18. "Rename the error message in the AST limit reached popup:
+    Msg 1: 'Screen Time [Limit] mins reached' (44sp bold)
+    Msg 2: 'Please play with other toys' (54sp bold)"
+19. "Set Msg 1 to 44sp bold and Msg 2 to 54sp bold for both the Cool Off Period and AST limit reached popups."
+20. "In settings, if a folder has text '-skipscan', ignore that folder's videos and its subfolders during scan/rescan."
+21. "In the settings popup, next to the Recent row, add a row to enable/disable the skipscan implementation (Disabled by default)."
+22. "Change the Settings Gear Icon in the header to a Hamburger icon (3 lines). Add the Settings Gear Icon back inside the popup menu before the 'Settings' text."
+23. "The app name should be PPGVideoPlayer, not PPG-YouTubeKids. Rename it in the app and the Android Studio IDE project name."
+24. "Update all requirement and test documents with all new enhancements and bump the version."
+25. "Check in v3.2 into Git with tags."
